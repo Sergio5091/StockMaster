@@ -1,4 +1,8 @@
 package com.backend.stockmaster.stock.application.mapper;
 
-public interface StockMapper {
+import org.springframework.stereotype.Component;
+
+@Component
+public class StockMapper {
+    // TODO: Implémenter les méthodes de mapping
 }

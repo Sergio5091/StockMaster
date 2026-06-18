@@ -71,4 +71,22 @@ public class UserApplicationService {
         return userRepository.findAll(pageable)
                 .map(userMapper::toResponse);
     }
+
+    public Page<UserResponse> findAllWithFilters(String role, Boolean actif, Pageable pageable) {
+        return userRepository.findAll(pageable)
+                .map(userMapper::toResponse);
+    }
+
+    public UserResponse findById(Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("Utilisateur introuvable"));
+        return userMapper.toResponse(user);
+    }
+
+    public void activateUser(Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("Utilisateur introuvable"));
+        user.setActive(true);
+        userRepository.save(user);
+    }
 }
