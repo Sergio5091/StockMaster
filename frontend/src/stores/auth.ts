@@ -14,35 +14,31 @@ export interface User {
 
 const DEMO_USERS: Record<string, { password: string; user: User }> = {
   'admin@stockmaster.com': {
-    password: 'Admin1234',
+    password: 'Admin1234!',
     user: {
-      id: 1, nom: 'Dupont', prenom: 'Alice', email: 'admin@stockmaster.com',
+      id: 1, nom: 'Dupont', prenom: 'Admin', email: 'admin@stockmaster.com',
       role: 'ROLE_ADMIN', actif: true,
-      entrepots: [
-        { id: 1, nom: 'Entrepôt Paris-Nord', code: 'ENT-001' },
-        { id: 2, nom: 'Entrepôt Lyon-Sud', code: 'ENT-002' },
-        { id: 3, nom: 'Entrepôt Marseille', code: 'ENT-003' },
-      ],
+      entrepots: [],
     },
   },
   'manager@stockmaster.com': {
-    password: 'Manager1234',
+    password: 'Manager1234!',
     user: {
       id: 2, nom: 'Martin', prenom: 'Bernard', email: 'manager@stockmaster.com',
       role: 'ROLE_MANAGER', actif: true,
-      entrepots: [{ id: 1, nom: 'Entrepôt Paris-Nord', code: 'ENT-001' }],
+      entrepots: [],
     },
   },
   'operator@stockmaster.com': {
-    password: 'Operator1234',
+    password: 'Operator1234!',
     user: {
       id: 3, nom: 'Leroy', prenom: 'Claire', email: 'operator@stockmaster.com',
       role: 'ROLE_OPERATOR', actif: true,
-      entrepots: [{ id: 1, nom: 'Entrepôt Paris-Nord', code: 'ENT-001' }],
+      entrepots: [],
     },
   },
   'auditor@stockmaster.com': {
-    password: 'Auditor1234',
+    password: 'Auditor1234!',
     user: {
       id: 4, nom: 'Moreau', prenom: 'David', email: 'auditor@stockmaster.com',
       role: 'ROLE_AUDITOR', actif: true,

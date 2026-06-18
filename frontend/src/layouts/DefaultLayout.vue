@@ -20,24 +20,24 @@
         <NavSection v-if="sidebarOpen" label="Structure" />
         <NavItem :open="sidebarOpen" :to="{ name: 'warehouses' }" icon="Warehouse" label="Entrepôts" />
         <NavSection v-if="sidebarOpen" label="Catalogue" />
-        <NavItem v-if="can('manage_categories')" :open="sidebarOpen" :to="{ name: 'categories' }" icon="Tag" label="Catégories" />
+        <NavItem :open="sidebarOpen" :to="{ name: 'categories' }" icon="Tag" label="Catégories" />
         <NavItem :open="sidebarOpen" :to="{ name: 'products' }" icon="Package" label="Produits" />
         <NavItem :open="sidebarOpen" :to="{ name: 'suppliers' }" icon="Truck" label="Fournisseurs" />
         <NavSection v-if="sidebarOpen" label="Stocks" />
         <NavItem :open="sidebarOpen" :to="{ name: 'stocks' }" icon="BarChart3" label="Niveaux de stock" />
         <NavItem :open="sidebarOpen" :to="{ name: 'stock-movements' }" icon="ArrowLeftRight" label="Mouvements" />
         <NavSection v-if="sidebarOpen" label="Opérations" />
-        <NavItem v-if="can('create_receipt')" :open="sidebarOpen" :to="{ name: 'receipts' }" icon="PackagePlus" label="Bons de réception" />
-        <NavItem v-if="can('create_issue')" :open="sidebarOpen" :to="{ name: 'issues' }" icon="PackageMinus" label="Bons de sortie" />
-        <NavItem v-if="can('create_transfer')" :open="sidebarOpen" :to="{ name: 'transfers' }" icon="MoveRight" label="Transferts" />
-        <NavItem v-if="can('manage_orders')" :open="sidebarOpen" :to="{ name: 'purchase-orders' }" icon="ShoppingCart" label="Commandes" />
-        <NavItem v-if="can('launch_inventory')" :open="sidebarOpen" :to="{ name: 'inventories' }" icon="ClipboardList" label="Inventaires" />
+        <NavItem :open="sidebarOpen" :to="{ name: 'receipts' }" icon="PackagePlus" label="Bons de réception" />
+        <NavItem :open="sidebarOpen" :to="{ name: 'issues' }" icon="PackageMinus" label="Bons de sortie" />
+        <NavItem :open="sidebarOpen" :to="{ name: 'transfers' }" icon="MoveRight" label="Transferts" />
+        <NavItem :open="sidebarOpen" :to="{ name: 'purchase-orders' }" icon="ShoppingCart" label="Commandes" />
+        <NavItem :open="sidebarOpen" :to="{ name: 'inventories' }" icon="ClipboardList" label="Inventaires" />
         <NavSection v-if="sidebarOpen" label="Supervision" />
         <NavItem :open="sidebarOpen" :to="{ name: 'alerts' }" icon="Bell" label="Alertes" :badge="unreadAlerts" />
-        <NavItem v-if="can('view_reports')" :open="sidebarOpen" :to="{ name: 'reports' }" icon="FileText" label="Rapports" />
-        <NavItem v-if="can('view_audit')" :open="sidebarOpen" :to="{ name: 'audit' }" icon="History" label="Audit" />
-        <NavSection v-if="sidebarOpen && can('manage_users')" label="Administration" />
-        <NavItem v-if="can('manage_users')" :open="sidebarOpen" :to="{ name: 'users' }" icon="Users" label="Utilisateurs" />
+        <NavItem :open="sidebarOpen" :to="{ name: 'reports' }" icon="FileText" label="Rapports" />
+        <NavItem :open="sidebarOpen" :to="{ name: 'audit' }" icon="History" label="Audit" />
+        <NavSection v-if="sidebarOpen" label="Administration" />
+        <NavItem :open="sidebarOpen" :to="{ name: 'users' }" icon="Users" label="Utilisateurs" />
       </nav>
       <div class="border-t p-3" style="border-color: rgba(255,255,255,0.06);">
         <RouterLink to="/profile" class="flex items-center gap-3 p-2 rounded-xl hover:bg-white/5 transition-colors cursor-pointer">
@@ -112,13 +112,11 @@ import { RouterView, RouterLink, useRoute, useRouter } from 'vue-router'
 import { LayoutDashboard, Warehouse, Tag, Package, Truck, BarChart3, ArrowLeftRight, PackagePlus, PackageMinus, MoveRight, ShoppingCart, ClipboardList, Bell, FileText, History, Users, Menu, ChevronLeft, ChevronRight, ChevronDown, User, LogOut } from 'lucide-vue-next'
 import { useAuthStore } from '@/stores/auth'
 import { useNotificationsStore } from '@/stores/notifications'
-import { usePermissions } from '@/composables/usePermissions'
 import NavItem from '@/components/common/NavItem.vue'
 import NavSection from '@/components/common/NavSection.vue'
 
 const auth = useAuthStore()
 const notifications = useNotificationsStore()
-const { can } = usePermissions()
 const route = useRoute()
 const router = useRouter()
 const sidebarOpen = ref(true)
