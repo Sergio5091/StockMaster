@@ -10,8 +10,10 @@ import java.util.Optional;
 
 public interface StockRepository extends JpaRepository<Stock, Long> {
     Optional<Stock> findByProduitIdAndEntrepotId(Long produitId, Long entrepotId);
-    Page<Stock> findAll(Pageable pageable);
+
     List<Stock> findByEntrepotId(Long entrepotId);
+
     List<Stock> findByProduitId(Long produitId);
+
     List<Stock> findByQuantiteDisponibleLessThanAndProduitIdIn(Integer seuil, List<Long> produitIds);
 }

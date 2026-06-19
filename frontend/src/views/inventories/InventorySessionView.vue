@@ -47,18 +47,37 @@
   </div>
 </template>
 <script setup lang="ts">
-import { ref, computed } from 'vue'
-import { useRoute } from 'vue-router'
+import { ref, computed, onMounted } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { CheckCircle2 } from 'lucide-vue-next'
 import PageHeader from '@/components/common/PageHeader.vue'
 import StatusBadge from '@/components/common/StatusBadge.vue'
-import { INVENTORIES, PRODUCTS } from '@/services/mockData'
+import { inventoryService as InventoryService } from '@/services/operations.service'
+import ProductService, { type Product } from '@/services/product.service'
 import { usePermissions } from '@/composables/usePermissions'
 const { can } = usePermissions()
 const route = useRoute()
-const invData = INVENTORIES.find(i => i.id === Number(route.params.id)) || INVENTORIES[0]
-const inv = ref({ ...invData })
-const lines = ref(PRODUCTS.slice(0, 6).map((p, i) => ({ id: i + 1, produit: p.nom, reference: p.reference, qteTheorique: p.stockTotal, qteComptee: null as number | null })))
+const router = useRouter()
+const inv = ref({ id: 0, numero: '', entrepotNom: '', type: '', statut: 'BROUILLON', lignes: [] as any[] })
+const lines = ref<any[]>([])
+const saving = ref(false)
+onMounted(async () => {
+  const data = await InventoryService.findById(Number(route.params.id))
+  inv.value = data
+  const products = (await ProductService.getAll(0, 200)).content
+  const theo = products.slice(0, 6).map((p: Product, i: number) => ({ id: i + 1, produitId: p.id, produit: p.nom, reference: p.reference, qteTheorique: p.stockTotal ?? 0, qteComptee: null as number | null }))
+  lines.value = theo
+})
 const ecarts = computed(() => lines.value.filter(l => l.qteComptee !== null && l.qteComptee !== l.qteTheorique).length)
-function cloturer() { inv.value.statut = 'TERMINE' }
+async function cloturer() {
+  saving.value = true
+  try {
+    const res = await InventoryService.validate(inv.value.id)
+    inv.value.statut = res.statut
+  } catch (e) {
+    console.error(e)
+  } finally {
+    saving.value = false
+  }
+}
 </script>

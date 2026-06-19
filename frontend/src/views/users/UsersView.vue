@@ -1,25 +1,26 @@
 <template>
   <div class="p-6 max-w-[1400px] mx-auto">
-    <PageHeader title="Utilisateurs" :subtitle="`${filtered.length} utilisateur(s)`" >
+    <PageHeader title="Utilisateurs" :subtitle="`${total} utilisateur(s)`">
       <template #actions>
-        <button v-if="can('manage_users')" @click="openCreate" class="btn-primary flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold text-white">
+        <button v-if="can('manage_users')" @click="openCreate"
+          class="btn-primary flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold text-white">
           <UserPlus :size="15" /> Nouvel utilisateur
         </button>
       </template>
     </PageHeader>
 
-    <!-- Filters -->
+    <!-- Filtres -->
     <div class="card-premium rounded-2xl p-4 mb-6 flex flex-wrap gap-3 items-center">
       <div class="relative flex-1 min-w-[200px]">
         <Search :size="15" class="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
-        <input v-model="search" type="search" placeholder="Nom, email…" class="input-field pl-10" />
+        <input v-model="search" type="search" placeholder="Nom, email, username…" class="input-field pl-10" />
       </div>
       <select v-model="filterRole" class="select-field w-auto min-w-[170px]">
         <option value="">Tous les rôles</option>
-        <option value="ROLE_ADMIN">Administrateur</option>
-        <option value="ROLE_MANAGER">Gestionnaire</option>
-        <option value="ROLE_OPERATOR">Magasinier</option>
-        <option value="ROLE_AUDITOR">Auditeur</option>
+        <option value="ADMINISTRATEUR">Administrateur</option>
+        <option value="GESTIONNAIRE">Gestionnaire</option>
+        <option value="MAGASINIER">Magasinier</option>
+        <option value="AUDITEUR">Auditeur</option>
       </select>
       <select v-model="filterStatut" class="select-field w-auto min-w-[130px]">
         <option value="">Tous</option>
@@ -28,15 +29,25 @@
       </select>
     </div>
 
+    <!-- Loader -->
+    <div v-if="loading" class="flex justify-center py-20">
+      <div class="w-8 h-8 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin" />
+    </div>
+
+    <!-- Erreur -->
+    <div v-else-if="error" class="card-premium rounded-2xl p-8 text-center text-red-500">
+      <p class="font-medium">{{ error }}</p>
+      <button @click="load" class="mt-3 text-sm underline">Réessayer</button>
+    </div>
+
     <!-- Table -->
-    <div class="card-premium rounded-2xl overflow-hidden">
+    <div v-else class="card-premium rounded-2xl overflow-hidden">
       <table class="w-full text-sm">
         <thead>
           <tr class="border-b border-border bg-muted/30">
             <th class="text-left px-4 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Utilisateur</th>
             <th class="text-left px-4 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wide hidden md:table-cell">Rôle</th>
-            <th class="text-left px-4 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wide hidden lg:table-cell">Entrepôts</th>
-            <th class="text-left px-4 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wide hidden lg:table-cell">Dernière connexion</th>
+            <th class="text-left px-4 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wide hidden lg:table-cell">Créé le</th>
             <th class="text-left px-4 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Statut</th>
             <th class="px-4 py-3.5"></th>
           </tr>
@@ -47,11 +58,11 @@
               <div class="flex items-center gap-3">
                 <div class="w-9 h-9 rounded-xl flex items-center justify-center text-white text-xs font-bold shrink-0"
                   :class="roleAvatarBg(u.role)">
-                  {{ u.prenom[0] }}{{ u.nom[0] }}
+                  {{ initials(u) }}
                 </div>
                 <div>
-                  <div class="font-semibold text-foreground">{{ u.prenom }} {{ u.nom }}</div>
-                  <div class="text-xs text-muted-foreground">{{ u.email }}</div>
+                  <div class="font-semibold text-foreground">{{ u.fullName || u.username }}</div>
+                  <div class="text-xs text-muted-foreground">{{ u.email || u.username }}</div>
                 </div>
               </div>
             </td>
@@ -60,26 +71,28 @@
                 {{ roleLabel(u.role) }}
               </span>
             </td>
-            <td class="px-4 py-3.5 hidden lg:table-cell">
-              <div v-if="u.entrepots.length" class="flex flex-wrap gap-1">
-                <span v-for="e in u.entrepots" :key="e" class="text-xs px-1.5 py-0.5 rounded bg-muted border border-border font-mono text-muted-foreground">{{ e }}</span>
-              </div>
-              <span v-else class="text-xs text-muted-foreground">—</span>
+            <td class="px-4 py-3.5 hidden lg:table-cell text-xs text-muted-foreground">
+              {{ u.createdAt ? formatDatetime(u.createdAt) : '—' }}
             </td>
-            <td class="px-4 py-3.5 hidden lg:table-cell text-xs text-muted-foreground">{{ u.lastLogin ? formatDatetime(u.lastLogin) : '—' }}</td>
-            <td class="px-4 py-3.5"><StatusBadge :status="u.actif ? 'actif' : 'inactif'" :dot="true" /></td>
+            <td class="px-4 py-3.5">
+              <StatusBadge :status="u.active ? 'actif' : 'inactif'" :dot="true" />
+            </td>
             <td class="px-4 py-3.5">
               <div class="flex items-center gap-1 justify-end">
-                <button v-if="can('manage_users')" @click="openEdit(u)" class="p-1.5 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground transition-colors" title="Modifier">
+                <button v-if="can('manage_users')" @click="openEdit(u)"
+                  class="p-1.5 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground transition-colors" title="Modifier">
                   <Edit3 :size="14" />
                 </button>
-                <button v-if="can('manage_users') && u.actif" @click="toggleUser(u)" class="p-1.5 rounded-lg hover:bg-red-50 text-muted-foreground hover:text-red-500 transition-colors" title="Désactiver">
+                <button v-if="can('manage_users') && u.active" @click="deactivate(u)"
+                  class="p-1.5 rounded-lg hover:bg-red-50 text-muted-foreground hover:text-red-500 transition-colors" title="Désactiver">
                   <UserX :size="14" />
                 </button>
-                <button v-if="can('manage_users') && !u.actif" @click="toggleUser(u)" class="p-1.5 rounded-lg hover:bg-emerald-50 text-muted-foreground hover:text-emerald-600 transition-colors" title="Activer">
+                <button v-if="can('manage_users') && !u.active" @click="activate(u)"
+                  class="p-1.5 rounded-lg hover:bg-emerald-50 text-muted-foreground hover:text-emerald-600 transition-colors" title="Activer">
                   <UserCheck :size="14" />
                 </button>
-                <button v-if="can('manage_users')" @click="resetPassword(u)" class="p-1.5 rounded-lg hover:bg-amber-50 text-muted-foreground hover:text-amber-600 transition-colors" title="Réinitialiser mot de passe">
+                <button v-if="can('manage_users')" @click="openResetPassword(u)"
+                  class="p-1.5 rounded-lg hover:bg-amber-50 text-muted-foreground hover:text-amber-600 transition-colors" title="Réinitialiser mot de passe">
                   <KeyRound :size="14" />
                 </button>
               </div>
@@ -93,12 +106,40 @@
       </div>
     </div>
 
-    <UserFormModal v-if="showForm" :user="editingUser" @close="closeForm" @save="saveUser" />
+    <!-- Modale reset password -->
+    <Teleport to="body">
+      <div v-if="showResetModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 modal-overlay" @click.self="showResetModal = false">
+        <div class="bg-card rounded-2xl shadow-2xl w-full max-w-sm border border-border">
+          <div class="flex items-center justify-between px-6 py-4 border-b border-border">
+            <h2 class="font-semibold">Réinitialiser le mot de passe</h2>
+            <button @click="showResetModal = false"><X :size="16" class="text-muted-foreground" /></button>
+          </div>
+          <form @submit.prevent="confirmResetPassword" class="p-6 space-y-4">
+            <p class="text-sm text-muted-foreground">
+              Nouveau mot de passe pour <span class="font-semibold text-foreground">{{ resetTarget?.fullName || resetTarget?.username }}</span>
+            </p>
+            <div>
+              <label class="label-field">Nouveau mot de passe *</label>
+              <input v-model="newPassword" type="password" class="input-field" required minlength="6" />
+            </div>
+            <div v-if="resetError" class="text-red-500 text-sm">{{ resetError }}</div>
+            <div class="flex gap-3 pt-2 border-t border-border">
+              <button type="button" @click="showResetModal = false" class="flex-1 py-2.5 rounded-xl border border-border text-sm hover:bg-muted transition-colors">Annuler</button>
+              <button type="submit" :disabled="resetting" class="flex-1 btn-primary py-2.5 rounded-xl text-sm font-semibold text-white disabled:opacity-60">
+                {{ resetting ? '…' : 'Confirmer' }}
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </Teleport>
+
+    <UserFormModal v-if="showForm" :user="editingUser" @close="closeForm" @saved="onSaved" />
   </div>
 </template>
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
-import { UserPlus, Search, Edit3, UserX, UserCheck, KeyRound, Users } from 'lucide-vue-next'
+import { UserPlus, Search, Edit3, UserX, UserCheck, KeyRound, Users, X } from 'lucide-vue-next'
 import PageHeader from '@/components/common/PageHeader.vue'
 import StatusBadge from '@/components/common/StatusBadge.vue'
 import UserFormModal from './UserFormModal.vue'
@@ -109,49 +150,35 @@ import { userService, type User } from '@/services/user.service'
 const { can } = usePermissions()
 const users = ref<User[]>([])
 const loading = ref(false)
-const error = ref<string | null>(null)
+const error = ref('')
+const total = ref(0)
 const search = ref('')
 const filterRole = ref('')
 const filterStatut = ref('')
 const showForm = ref(false)
 const editingUser = ref<User | null>(null)
+const showResetModal = ref(false)
+const resetTarget = ref<User | null>(null)
+const newPassword = ref('')
+const resetting = ref(false)
+const resetError = ref('')
 
 const filtered = computed(() => users.value.filter(u => {
-  if (search.value && !`${u.prenom} ${u.nom} ${u.email}`.toLowerCase().includes(search.value.toLowerCase())) return false
+  if (search.value && !`${u.fullName || ''} ${u.username} ${u.email || ''}`.toLowerCase().includes(search.value.toLowerCase())) return false
   if (filterRole.value && u.role !== filterRole.value) return false
-  if (filterStatut.value === 'actif' && !u.actif) return false
-  if (filterStatut.value === 'inactif' && u.actif) return false
+  if (filterStatut.value === 'actif' && !u.active) return false
+  if (filterStatut.value === 'inactif' && u.active) return false
   return true
 }))
 
-function roleLabel(role: string) {
-  return { ROLE_ADMIN: 'Admin', ROLE_MANAGER: 'Gestionnaire', ROLE_OPERATOR: 'Magasinier', ROLE_AUDITOR: 'Auditeur' }[role] || role
-}
-function roleBadge(role: string) {
-  return {
-    ROLE_ADMIN: 'bg-purple-50 text-purple-700 border-purple-200',
-    ROLE_MANAGER: 'bg-blue-50 text-blue-700 border-blue-200',
-    ROLE_OPERATOR: 'bg-emerald-50 text-emerald-700 border-emerald-200',
-    ROLE_AUDITOR: 'bg-amber-50 text-amber-700 border-amber-200',
-  }[role] || 'badge-neutral'
-}
-function roleAvatarBg(role: string) {
-  return {
-    ROLE_ADMIN: 'bg-gradient-to-br from-purple-500 to-purple-600',
-    ROLE_MANAGER: 'bg-gradient-to-br from-blue-500 to-blue-600',
-    ROLE_OPERATOR: 'bg-gradient-to-br from-emerald-500 to-emerald-600',
-    ROLE_AUDITOR: 'bg-gradient-to-br from-amber-500 to-amber-600',
-  }[role] || 'bg-gradient-to-br from-gray-400 to-gray-500'
-}
-
-async function loadUsers() {
+async function load() {
+  loading.value = true; error.value = ''
   try {
-    loading.value = true
-    error.value = null
-    users.value = await userService.findAll()
-  } catch (e) {
-    error.value = 'Erreur lors du chargement des utilisateurs'
-    console.error(e)
+    const page = await userService.findAll(0, 200)
+    users.value = page.content
+    total.value = page.totalElements
+  } catch (e: any) {
+    error.value = e?.response?.data?.message || 'Erreur lors du chargement des utilisateurs'
   } finally {
     loading.value = false
   }
@@ -160,25 +187,72 @@ async function loadUsers() {
 function openCreate() { editingUser.value = null; showForm.value = true }
 function openEdit(u: User) { editingUser.value = u; showForm.value = true }
 function closeForm() { showForm.value = false; editingUser.value = null }
-async function saveUser(u: any) {
+function onSaved() { closeForm(); load() }
+
+async function deactivate(u: User) {
   try {
-    if (editingUser.value) {
-      await userService.update(editingUser.value.id, u)
-    } else {
-      await userService.create(u)
-    }
-    await loadUsers()
-    closeForm()
-  } catch (e) {
-    console.error('Erreur lors de la sauvegarde:', e)
+    await userService.deactivate(u.id)
+    u.active = false
+  } catch (e: any) {
+    error.value = e?.response?.data?.message || 'Erreur lors de la désactivation'
   }
 }
 
-function toggleUser(u: User) { u.actif = !u.actif }
-function resetPassword(u: User) { alert(`Mot de passe réinitialisé pour ${u.prenom} ${u.nom}. Un email a été envoyé.`) }
+async function activate(u: User) {
+  try {
+    await userService.activate(u.id)
+    u.active = true
+  } catch (e: any) {
+    error.value = e?.response?.data?.message || 'Erreur lors de la réactivation'
+  }
+}
 
-// Lifecycle
-onMounted(() => {
-  loadUsers()
-})
+function openResetPassword(u: User) {
+  resetTarget.value = u
+  newPassword.value = ''
+  resetError.value = ''
+  showResetModal.value = true
+}
+
+async function confirmResetPassword() {
+  if (!resetTarget.value) return
+  resetting.value = true; resetError.value = ''
+  try {
+    await userService.resetPassword(resetTarget.value.id, newPassword.value)
+    showResetModal.value = false
+  } catch (e: any) {
+    resetError.value = e?.response?.data?.message || 'Erreur lors de la réinitialisation'
+  } finally {
+    resetting.value = false
+  }
+}
+
+function initials(u: User) {
+  if (u.fullName) {
+    const parts = u.fullName.trim().split(' ')
+    return parts.length >= 2 ? parts[0][0] + parts[1][0] : parts[0].slice(0, 2)
+  }
+  return u.username.slice(0, 2).toUpperCase()
+}
+function roleLabel(r: string) {
+  return ({ ADMINISTRATEUR: 'Admin', GESTIONNAIRE: 'Gestionnaire', MAGASINIER: 'Magasinier', AUDITEUR: 'Auditeur' } as any)[r] || r
+}
+function roleBadge(r: string) {
+  return ({
+    ADMINISTRATEUR: 'bg-purple-50 text-purple-700 border-purple-200',
+    GESTIONNAIRE: 'bg-blue-50 text-blue-700 border-blue-200',
+    MAGASINIER: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+    AUDITEUR: 'bg-amber-50 text-amber-700 border-amber-200',
+  } as any)[r] || 'badge-neutral'
+}
+function roleAvatarBg(r: string) {
+  return ({
+    ADMINISTRATEUR: 'bg-gradient-to-br from-purple-500 to-purple-600',
+    GESTIONNAIRE: 'bg-gradient-to-br from-blue-500 to-blue-600',
+    MAGASINIER: 'bg-gradient-to-br from-emerald-500 to-emerald-600',
+    AUDITEUR: 'bg-gradient-to-br from-amber-500 to-amber-600',
+  } as any)[r] || 'bg-gradient-to-br from-gray-400 to-gray-500'
+}
+
+onMounted(load)
 </script>

@@ -1,6 +1,9 @@
 <template>
   <div class="p-6 max-w-[800px] mx-auto">
     <PageHeader title="Configuration des alertes" subtitle="Paramétrage des seuils d'alerte" back="Alertes" />
+    <div v-if="statusMessage" class="mb-4 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+      {{ statusMessage }}
+    </div>
     <div class="space-y-4">
       <div v-for="cfg in configs" :key="cfg.type" class="card-premium rounded-2xl p-5">
         <div class="flex items-start justify-between mb-4">
@@ -27,14 +30,38 @@
   </div>
 </template>
 <script setup lang="ts">
-import { ref } from 'vue'
+import { onMounted, ref } from 'vue'
 import { AlertTriangle, TrendingUp, Layers, Clock, Save } from 'lucide-vue-next'
 import PageHeader from '@/components/common/PageHeader.vue'
-const configs = ref([
+const STORAGE_KEY = 'stockmaster-alert-configs'
+const statusMessage = ref('')
+const baseConfigs = [
   { type: 'stock_critical', label: 'Stock critique', description: 'Alerte si stock < minimum', actif: true, seuil: 0, email: '', icon: AlertTriangle, bg: 'bg-red-100', color: 'text-red-500' },
   { type: 'stock_excess', label: 'Stock excédentaire', description: 'Alerte si stock > maximum', actif: true, seuil: 0, email: '', icon: TrendingUp, bg: 'bg-blue-100', color: 'text-blue-500' },
   { type: 'zone_full', label: 'Zone saturée', description: "Alerte si occupation > seuil", actif: true, seuil: 90, email: '', icon: Layers, bg: 'bg-amber-100', color: 'text-amber-500' },
   { type: 'order_late', label: 'Commande en retard', description: 'Alerte si date livraison dépassée', actif: true, seuil: 0, email: '', icon: Clock, bg: 'bg-orange-100', color: 'text-orange-500' },
-])
-function save() { alert('Configuration enregistrée') }
+]
+
+const configs = ref(baseConfigs.map(cfg => ({ ...cfg })))
+
+function loadSavedConfigs() {
+  const raw = localStorage.getItem(STORAGE_KEY)
+  if (!raw) return
+  try {
+    const saved = JSON.parse(raw) as Array<{ type: string; actif: boolean; seuil: number; email: string }>
+    configs.value = baseConfigs.map(cfg => {
+      const found = saved.find(item => item.type === cfg.type)
+      return found ? { ...cfg, actif: found.actif, seuil: found.seuil, email: found.email } : { ...cfg }
+    })
+  } catch {
+    localStorage.removeItem(STORAGE_KEY)
+  }
+}
+
+function save() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(configs.value.map(({ type, actif, seuil, email }) => ({ type, actif, seuil, email }))))
+  statusMessage.value = 'Configuration enregistrée localement'
+}
+
+onMounted(loadSavedConfigs)
 </script>

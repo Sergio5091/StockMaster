@@ -51,14 +51,44 @@
   </div>
 </template>
 <script setup lang="ts">
-import { reactive } from 'vue'
+import { reactive, onMounted, ref } from 'vue'
 import { RouterLink, useRouter } from 'vue-router'
 import { Plus, Package, Trash2 } from 'lucide-vue-next'
 import PageHeader from '@/components/common/PageHeader.vue'
-import { WAREHOUSES, PRODUCTS } from '@/services/mockData'
+import WarehouseService, { type Warehouse } from '@/services/warehouse.service'
+import ProductService, { type Product } from '@/services/product.service'
+import { issueService } from '@/services/operations.service'
 const router = useRouter()
-const warehouses = WAREHOUSES.filter(w => w.actif); const products = PRODUCTS
+const warehouses = reactive<Warehouse[]>([])
+const products = reactive<Product[]>([])
+const loading = ref(false)
+onMounted(async () => {
+  warehouses.push(...(await WarehouseService.getAll()).filter(w => w.actif))
+  products.push(...(await ProductService.getAll(0, 200)).content.filter(p => p.actif))
+})
 const form = reactive({ entrepotId: warehouses[0]?.id ?? 1, motif: 'LIVRAISON_CLIENT', clientNom: '', clientReference: '', dateSortie: new Date().toISOString().slice(0,10), note: '', lignes: [] as { produitRef: string; quantite: number }[] })
 function addLine() { form.lignes.push({ produitRef: products[0]?.reference ?? '', quantite: 1 }) }
-function submit() { router.push('/issues') }
+async function submit() {
+  if (!form.entrepotId || !form.lignes.length) return
+  loading.value = true
+  try {
+    await issueService.create({
+      entrepotId: form.entrepotId,
+      motif: form.motif,
+      clientNom: form.clientNom || undefined,
+      clientReference: form.clientReference || undefined,
+      dateSortie: form.dateSortie,
+      note: form.note,
+      lignes: form.lignes.map(l => ({
+        produitId: products.find(p => p.reference === l.produitRef)!.id,
+        quantiteDemandee: l.quantite
+      }))
+    })
+    router.push('/issues')
+  } catch (e) {
+    console.error(e)
+  } finally {
+    loading.value = false
+  }
+}
 </script>

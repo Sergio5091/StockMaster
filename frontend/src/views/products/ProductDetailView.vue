@@ -109,7 +109,7 @@ import { Package, Edit3, BarChart3, Warehouse, AlertTriangle, ArrowLeftRight } f
 import PageHeader from '@/components/common/PageHeader.vue'
 import StatusBadge from '@/components/common/StatusBadge.vue'
 import StockIndicator from '@/components/common/StockIndicator.vue'
-import { PRODUCTS, STOCKS, STOCK_MOVEMENTS, formatCurrency, formatDate } from '@/services/mockData'
+import { PRODUCTS, formatCurrency, formatDate } from '@/services/mockData'
 import { usePermissions } from '@/composables/usePermissions'
 const { can } = usePermissions()
 const route = useRoute()

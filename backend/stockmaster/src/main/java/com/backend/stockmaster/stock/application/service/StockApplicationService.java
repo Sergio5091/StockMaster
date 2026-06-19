@@ -1,63 +1,137 @@
 package com.backend.stockmaster.stock.application.service;
 
+import com.backend.stockmaster.core.exception.BusinessException;
+import com.backend.stockmaster.product.repository.ProductRepository;
 import com.backend.stockmaster.stock.application.dto.*;
+import com.backend.stockmaster.stock.domain.*;
 import com.backend.stockmaster.stock.repository.*;
+import com.backend.stockmaster.warehouse.repository.WarehouseRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
+@Transactional(readOnly = true)
 public class StockApplicationService {
 
     private final StockRepository stockRepository;
     private final StockMovementRepository stockMovementRepository;
+    private final ProductRepository productRepository;
+    private final WarehouseRepository warehouseRepository;
 
-    public void addStock(Long produitId, Long entrepotId, Integer quantite, com.backend.stockmaster.stock.domain.MovementType type, String reference, Object document, String username) {
-        // TODO: Implémentation à faire
-        throw new UnsupportedOperationException("À implémenter");
+    @Transactional
+    public void addStock(Long produitId, Long entrepotId, Integer quantite,
+                         MovementType type, String reference, Object ignored, String note) {
+        Stock stock = stockRepository.findByProduitIdAndEntrepotId(produitId, entrepotId)
+                .orElseGet(() -> Stock.builder().produitId(produitId).entrepotId(entrepotId).build());
+        int avant = stock.getQuantiteDisponible();
+        stock.setQuantiteDisponible(avant + quantite);
+        stockRepository.save(stock);
+        stockMovementRepository.save(StockMovement.builder()
+                .type(type).produitId(produitId)
+                .entrepotDestinationId(entrepotId)
+                .quantite(quantite).quantiteAvant(avant).quantiteApres(stock.getQuantiteDisponible())
+                .referenceDocument(reference).note(note).build());
     }
 
-    public void removeStock(Long produitId, Long entrepotId, Integer quantite, com.backend.stockmaster.stock.domain.MovementType type, String reference, Object document, String username) {
-        // TODO: Implémentation à faire
-        throw new UnsupportedOperationException("À implémenter");
+    @Transactional
+    public void removeStock(Long produitId, Long entrepotId, Integer quantite,
+                            MovementType type, String reference, Object ignored, String note) {
+        Stock stock = stockRepository.findByProduitIdAndEntrepotId(produitId, entrepotId)
+                .orElseThrow(() -> new BusinessException("Stock introuvable pour ce produit/entrepôt"));
+        if (stock.getQuantiteDisponible() < quantite)
+            throw new BusinessException("Stock insuffisant : disponible=" + stock.getQuantiteDisponible() + ", demandé=" + quantite);
+        int avant = stock.getQuantiteDisponible();
+        stock.setQuantiteDisponible(avant - quantite);
+        stockRepository.save(stock);
+        stockMovementRepository.save(StockMovement.builder()
+                .type(type).produitId(produitId)
+                .entrepotSourceId(entrepotId)
+                .quantite(quantite).quantiteAvant(avant).quantiteApres(stock.getQuantiteDisponible())
+                .referenceDocument(reference).note(note).build());
     }
 
     public StockDTO findByProduitAndEntrepot(Long produitId, Long entrepotId) {
-        // TODO: Implémentation à faire
-        throw new UnsupportedOperationException("À implémenter");
-    }
-
-    public Page<StockMovementDTO> findMovementsByProduit(Long produitId, Pageable pageable) {
-        // TODO: Implémentation à faire
-        throw new UnsupportedOperationException("À implémenter");
-    }
-
-    public void updateStock(Long produitId, Long entrepotId, int quantite, String referenceDocument, String username) {
-        // TODO: Implémentation à faire
-        throw new UnsupportedOperationException("À implémenter");
-    }
-
-    public void decreaseStock(Long produitId, Long entrepotId, int quantite, String referenceDocument, String username) {
-        // TODO: Implémentation à faire
-        throw new UnsupportedOperationException("À implémenter");
+        return stockRepository.findByProduitIdAndEntrepotId(produitId, entrepotId)
+                .map(this::toDTO).orElse(null);
     }
 
     public Page<StockDTO> findAll(Pageable pageable) {
-        // TODO: Implémentation à faire
-        throw new UnsupportedOperationException("À implémenter");
+        return stockRepository.findAll(pageable).map(this::toDTO);
     }
 
     public List<StockDTO> findByWarehouse(Long warehouseId) {
-        // TODO: Implémentation à faire
-        throw new UnsupportedOperationException("À implémenter");
+        return stockRepository.findByEntrepotId(warehouseId).stream()
+                .map(this::toDTO).collect(Collectors.toList());
     }
 
     public Page<StockMovementDTO> findMovements(Pageable pageable) {
-        // TODO: Implémentation à faire
-        throw new UnsupportedOperationException("À implémenter");
+        return stockMovementRepository.findAll(pageable).map(this::toMovementDTO);
+    }
+
+    public Page<StockMovementDTO> findMovementsByProduit(Long produitId, Pageable pageable) {
+        return stockMovementRepository.findByProduitId(produitId, pageable).map(this::toMovementDTO);
+    }
+
+    @Transactional
+    public void updateStock(Long produitId, Long entrepotId, int quantite, String reference, String note) {
+        addStock(produitId, entrepotId, quantite, MovementType.AJUSTEMENT_INVENTAIRE, reference, null, note);
+    }
+
+    @Transactional
+    public void decreaseStock(Long produitId, Long entrepotId, int quantite, String reference, String note) {
+        removeStock(produitId, entrepotId, quantite, MovementType.SORTIE, reference, null, note);
+    }
+
+    private StockDTO toDTO(Stock s) {
+        StockDTO dto = StockDTO.builder()
+                .id(s.getId()).produitId(s.getProduitId())
+                .entrepotId(s.getEntrepotId())
+                .quantiteDisponible(s.getQuantiteDisponible())
+                .quantiteReservee(s.getQuantiteReservee())
+                .quantiteEnTransit(s.getQuantiteEnTransit())
+                .build();
+        productRepository.findById(s.getProduitId()).ifPresent(p -> {
+            dto.setProduitRef(p.getReference());
+            dto.setProduitNom(p.getNom());
+            dto.setStockMinimum(p.getStockMinimum());
+            dto.setStockMaximum(p.getStockMaximum());
+            int q = s.getQuantiteDisponible();
+            if (q <= 0) dto.setStatut("critical");
+            else if (q <= p.getStockMinimum()) dto.setStatut("low");
+            else if (q >= p.getStockMaximum()) dto.setStatut("excess");
+            else dto.setStatut("normal");
+        });
+        warehouseRepository.findById(s.getEntrepotId()).ifPresent(w -> {
+            dto.setEntrepotCode(w.getCode());
+            dto.setEntrepotNom(w.getNom());
+        });
+        return dto;
+    }
+
+    private StockMovementDTO toMovementDTO(StockMovement m) {
+        StockMovementDTO dto = StockMovementDTO.builder()
+                .id(m.getId()).type(m.getType()).produitId(m.getProduitId())
+                .entrepotSourceId(m.getEntrepotSourceId())
+                .entrepotDestinationId(m.getEntrepotDestinationId())
+                .quantite(m.getQuantite()).quantiteAvant(m.getQuantiteAvant())
+                .quantiteApres(m.getQuantiteApres())
+                .referenceDocument(m.getReferenceDocument())
+                .note(m.getNote()).createdAt(m.getCreatedAt()).build();
+        productRepository.findById(m.getProduitId()).ifPresent(p -> {
+            dto.setProduitRef(p.getReference());
+            dto.setProduitNom(p.getNom());
+        });
+        if (m.getEntrepotSourceId() != null)
+            warehouseRepository.findById(m.getEntrepotSourceId()).ifPresent(w -> dto.setEntrepotSourceNom(w.getNom()));
+        if (m.getEntrepotDestinationId() != null)
+            warehouseRepository.findById(m.getEntrepotDestinationId()).ifPresent(w -> dto.setEntrepotDestinationNom(w.getNom()));
+        return dto;
     }
 }

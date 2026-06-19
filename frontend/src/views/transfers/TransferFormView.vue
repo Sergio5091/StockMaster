@@ -46,14 +46,41 @@
   </div>
 </template>
 <script setup lang="ts">
-import { reactive } from 'vue'
+import { reactive, onMounted, ref } from 'vue'
 import { RouterLink, useRouter } from 'vue-router'
 import { Plus, Package, Trash2 } from 'lucide-vue-next'
 import PageHeader from '@/components/common/PageHeader.vue'
-import { WAREHOUSES, PRODUCTS } from '@/services/mockData'
+import WarehouseService, { type Warehouse } from '@/services/warehouse.service'
+import ProductService, { type Product } from '@/services/product.service'
+import { transferService } from '@/services/operations.service'
 const router = useRouter()
-const warehouses = WAREHOUSES.filter(w => w.actif); const products = PRODUCTS
+const warehouses = reactive<Warehouse[]>([])
+const products = reactive<Product[]>([])
+const loading = ref(false)
+onMounted(async () => {
+  warehouses.push(...(await WarehouseService.getAll()).filter(w => w.actif))
+  products.push(...(await ProductService.getAll(0, 200)).content.filter(p => p.actif))
+})
 const form = reactive({ sourceId: null as number | null, destId: null as number | null, note: '', lignes: [] as { produitRef: string; quantite: number }[] })
 function addLine() { form.lignes.push({ produitRef: products[0]?.reference ?? '', quantite: 1 }) }
-function submit() { router.push('/transfers') }
+async function submit() {
+  if (!form.sourceId || !form.destId || !form.lignes.length) return
+  loading.value = true
+  try {
+    await transferService.create({
+      entrepotSourceId: form.sourceId,
+      entrepotDestinationId: form.destId,
+      note: form.note,
+      lignes: form.lignes.map(l => ({
+        produitId: products.find(p => p.reference === l.produitRef)!.id,
+        quantiteDemandee: l.quantite
+      }))
+    })
+    router.push('/transfers')
+  } catch (e) {
+    console.error(e)
+  } finally {
+    loading.value = false
+  }
+}
 </script>

@@ -50,15 +50,48 @@
   </div>
 </template>
 <script setup lang="ts">
-import { reactive, computed } from 'vue'
+import { reactive, computed, onMounted, ref } from 'vue'
 import { RouterLink, useRouter } from 'vue-router'
 import { Plus, ShoppingCart, Trash2 } from 'lucide-vue-next'
 import PageHeader from '@/components/common/PageHeader.vue'
-import { SUPPLIERS, WAREHOUSES, PRODUCTS, formatCurrency } from '@/services/mockData'
+import { supplierService, type Supplier } from '@/services/supplier.service'
+import WarehouseService, { type Warehouse } from '@/services/warehouse.service'
+import ProductService, { type Product } from '@/services/product.service'
+import { formatCurrency } from '@/utils/formatters'
+import { purchaseOrderService } from '@/services/operations.service'
 const router = useRouter()
-const suppliers = SUPPLIERS.filter(s => s.actif); const warehouses = WAREHOUSES.filter(w => w.actif); const products = PRODUCTS
+const suppliers = reactive<Supplier[]>([])
+const warehouses = reactive<Warehouse[]>([])
+const products = reactive<Product[]>([])
+const loading = ref(false)
+onMounted(async () => {
+  suppliers.push(...(await supplierService.findAllList()).filter(s => s.actif))
+  warehouses.push(...(await WarehouseService.getAll()).filter(w => w.actif))
+  products.push(...(await ProductService.getAll(0, 200)).content.filter(p => p.actif))
+})
 const form = reactive({ fournisseurId: null as number | null, entrepotId: warehouses[0]?.id ?? 1, dateLivraisonPrevue: '', note: '', lignes: [] as { produitRef: string; quantite: number; prixUnitaire: number }[] })
 function addLine() { form.lignes.push({ produitRef: products[0]?.reference ?? '', quantite: 1, prixUnitaire: 0 }) }
 const total = computed(() => form.lignes.reduce((s, l) => s + l.quantite * l.prixUnitaire, 0))
-function submit() { router.push('/purchase-orders') }
+async function submit() {
+  if (!form.fournisseurId || !form.entrepotId || !form.lignes.length) return
+  loading.value = true
+  try {
+    await purchaseOrderService.create({
+      fournisseurId: form.fournisseurId,
+      entrepotDestinationId: form.entrepotId,
+      dateLivraisonPrevue: form.dateLivraisonPrevue || undefined,
+      note: form.note,
+      lignes: form.lignes.map(l => ({
+        produitId: products.find(p => p.reference === l.produitRef)!.id,
+        quantiteCommandee: l.quantite,
+        prixUnitaire: l.prixUnitaire
+      }))
+    })
+    router.push('/purchase-orders')
+  } catch (e) {
+    console.error(e)
+  } finally {
+    loading.value = false
+  }
+}
 </script>

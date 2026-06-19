@@ -1,5 +1,15 @@
 <template>
   <div class="p-6 max-w-[1400px] mx-auto">
+    <div v-if="loading" class="flex justify-center py-20">
+      <div class="w-8 h-8 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin" />
+    </div>
+
+    <div v-else-if="error" class="card-premium rounded-2xl p-8 text-center text-red-500">
+      <p class="font-medium">{{ error }}</p>
+      <button @click="load" class="mt-3 text-sm underline">Réessayer</button>
+    </div>
+
+    <template v-else-if="warehouse">
     <PageHeader :title="warehouse.nom" :subtitle="`${warehouse.code} · ${warehouse.ville}`" back="Entrepôts">
       <template #actions>
         <RouterLink :to="`/warehouses/${warehouse.id}/zones`" class="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-muted border border-border text-sm font-medium text-foreground hover:bg-muted/80 transition-colors"><Layers :size="15" /> Gérer les zones</RouterLink>
@@ -17,7 +27,7 @@
             <div class="flex justify-between"><span class="text-muted-foreground">Adresse</span><span class="font-medium text-right">{{ warehouse.adresse }}, {{ warehouse.ville }}</span></div>
             <div class="flex justify-between"><span class="text-muted-foreground">Téléphone</span><span class="font-medium">{{ warehouse.telephone }}</span></div>
             <div class="flex justify-between"><span class="text-muted-foreground">Email</span><span class="font-medium text-xs">{{ warehouse.email }}</span></div>
-            <div class="flex justify-between"><span class="text-muted-foreground">Responsable</span><span class="font-medium">{{ warehouse.responsable?.nom || '—' }}</span></div>
+            <div class="flex justify-between"><span class="text-muted-foreground">Responsable</span><span class="font-medium">{{ warehouse.responsableUsername || '—' }}</span></div>
           </div>
         </div>
         <div class="card-premium rounded-2xl p-5">
@@ -52,7 +62,7 @@
               </div>
               <div class="text-right shrink-0">
                 <div class="font-semibold text-sm" :class="zoneOcc(z) > 85 ? 'text-red-500' : zoneOcc(z) > 65 ? 'text-amber-600' : 'text-emerald-600'">{{ zoneOcc(z) }}%</div>
-                <div class="text-xs text-muted-foreground">{{ z.emplacements - z.libres }} / {{ z.emplacements }} emp.</div>
+                <div class="text-xs text-muted-foreground">{{ (z.occupationM3 || 0).toLocaleString('fr-FR') }} / {{ (z.capaciteM3 || 0).toLocaleString('fr-FR') }} m³</div>
               </div>
             </div>
             <div v-if="!warehouseZones.length" class="text-center py-8 text-sm text-muted-foreground">Aucune zone</div>
@@ -60,23 +70,51 @@
         </div>
       </div>
     </div>
+    </template>
   </div>
 </template>
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
 import { Warehouse, Layers, Edit3, BarChart3 } from 'lucide-vue-next'
 import PageHeader from '@/components/common/PageHeader.vue'
 import StatusBadge from '@/components/common/StatusBadge.vue'
-import { WAREHOUSES, ZONES } from '@/services/mockData'
+import WarehouseService, { type Warehouse as WarehouseType, type Zone } from '@/services/warehouse.service'
 import { usePermissions } from '@/composables/usePermissions'
 const { can } = usePermissions()
 const route = useRoute()
 const id = Number(route.params.id)
-const warehouse = WAREHOUSES.find(w => w.id === id) || WAREHOUSES[0]
-const warehouseZones = ZONES.filter(z => z.entrepotId === warehouse.id)
-const occ = computed(() => Math.round((warehouse.capaciteUtilisee / warehouse.capaciteTotale) * 100))
-function zoneOcc(z: typeof ZONES[0]) { return Math.round((z.occupationM3 / z.capaciteM3) * 100) }
+const warehouse = ref<WarehouseType | null>(null)
+const warehouseZones = ref<Zone[]>([])
+const loading = ref(true)
+const error = ref('')
+const occ = computed(() => {
+  if (!warehouse.value?.capaciteTotale) return 0
+  return Math.round(((warehouse.value.capaciteUtilisee || 0) / warehouse.value.capaciteTotale) * 100)
+})
+function zoneOcc(z: Zone) {
+  if (!z.capaciteM3) return 0
+  return Math.round(((z.occupationM3 || 0) / z.capaciteM3) * 100)
+}
 function zoneIconBg(type: string) { return { RECEPTION: 'bg-blue-100', STOCKAGE: 'bg-emerald-100', EXPEDITION: 'bg-amber-100', QUARANTAINE: 'bg-red-100' }[type] || 'bg-muted' }
 function zoneIconColor(type: string) { return { RECEPTION: 'text-blue-600', STOCKAGE: 'text-emerald-600', EXPEDITION: 'text-amber-600', QUARANTAINE: 'text-red-500' }[type] || 'text-muted-foreground' }
+
+async function load() {
+  loading.value = true
+  error.value = ''
+  try {
+    const [wh, zones] = await Promise.all([
+      WarehouseService.getById(id),
+      WarehouseService.getZones(id),
+    ])
+    warehouse.value = wh
+    warehouseZones.value = zones
+  } catch (e: any) {
+    error.value = e?.response?.data?.message || 'Erreur lors du chargement de l’entrepôt'
+  } finally {
+    loading.value = false
+  }
+}
+
+onMounted(load)
 </script>

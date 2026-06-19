@@ -60,17 +60,21 @@
   </div>
 </template>
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { formatDate } from '@/utils/formatters'
+import { receiptService, type Receipt } from '@/services/operations.service'
+import { ref, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { CheckCircle2, XCircle, Check, X } from 'lucide-vue-next'
 import PageHeader from '@/components/common/PageHeader.vue'
 import StatusBadge from '@/components/common/StatusBadge.vue'
-import { RECEIPTS, formatDate } from '@/services/mockData'
 import { usePermissions } from '@/composables/usePermissions'
 const { can } = usePermissions()
 const route = useRoute()
-const receipt = ref({ ...(RECEIPTS.find(r => r.id === Number(route.params.id)) || RECEIPTS[0]) })
-const timeline = computed(() => [{ label: 'Brouillon créé', done: true }, { label: 'Soumis pour validation', done: receipt.value.statut !== 'BROUILLON' }, { label: 'Validé', done: receipt.value.statut === 'VALIDE' }])
+const receipt = ref<Receipt | null>(null)
+onMounted(async () => {
+  receipt.value = await receiptService.findById(Number(route.params.id))
+})
+const timeline = computed(() => receipt.value ? [{ label: 'Brouillon créé', done: true }, { label: 'Soumis pour validation', done: receipt.value.statut !== 'BROUILLON' }, { label: 'Validé', done: receipt.value.statut === 'VALIDE' }] : [])
 function validate() { receipt.value.statut = 'VALIDE' }
 function reject() { receipt.value.statut = 'REJETE' }
 </script>

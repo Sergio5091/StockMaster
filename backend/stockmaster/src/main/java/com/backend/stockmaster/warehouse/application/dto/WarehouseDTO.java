@@ -18,6 +18,8 @@ public class WarehouseDTO {
     private Long responsableId;
     private String responsableUsername;
     private Double capaciteTotale;
+    private Double capaciteUtilisee;
+    private int nbZones;
     private boolean actif;
     private String telephone;
     private String email;
