@@ -5,6 +5,14 @@ export interface LoginPayload {
   password: string
 }
 
+export interface RegisterRequest {
+  username: string
+  password: string
+  email?: string
+  fullName?: string
+  role?: string
+}
+
 export interface AuthResponse {
   token: string
   refreshToken: string
@@ -20,6 +28,13 @@ export interface AuthResponse {
 const AuthService = {
   async login(payload: LoginPayload): Promise<AuthResponse> {
     const { data } = await api.post<AuthResponse>('/auth/login', payload)
+    localStorage.setItem('token', data.token)
+    localStorage.setItem('refreshToken', data.refreshToken)
+    return data
+  },
+
+  async register(payload: RegisterRequest): Promise<AuthResponse> {
+    const { data } = await api.post<AuthResponse>('/auth/register', payload)
     localStorage.setItem('token', data.token)
     localStorage.setItem('refreshToken', data.refreshToken)
     return data

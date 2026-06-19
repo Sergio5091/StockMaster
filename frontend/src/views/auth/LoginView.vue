@@ -52,6 +52,7 @@
         </Transition>
       </button>
     </form>
+    <p class="mt-4 text-center text-sm" style="color: rgba(167,243,208,0.4);">Pas de compte ? <a @click.prevent="goRegister" class="text-green-300 cursor-pointer">S'inscrire</a></p>
     <p class="mt-6 text-center text-xs" style="color: rgba(167,243,208,0.3);">StockMaster v1.0 — Gestion de stocks multi-entrepôts</p>
   </div>
 </template>
@@ -60,23 +61,45 @@ import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { Mail, Lock, Eye, EyeOff, ArrowRight, Loader2, AlertCircle } from 'lucide-vue-next'
 import { useAuthStore } from '@/stores/auth'
+import AuthService from '@/services/auth.service'
 const router = useRouter()
 const auth = useAuthStore()
 const email = ref(''); const password = ref(''); const showPassword = ref(false); const loading = ref(false); const error = ref('')
 const demoAccounts = [
-  { role: 'Administrateur', email: 'admin@stockmaster.com', password: 'Admin1234' },
-  { role: 'Gestionnaire', email: 'manager@stockmaster.com', password: 'Manager1234' },
-  { role: 'Magasinier', email: 'operator@stockmaster.com', password: 'Operator1234' },
-  { role: 'Auditeur', email: 'auditor@stockmaster.com', password: 'Auditor1234' },
+  { role: 'Administrateur', email: 'admin@stockmaster.com', password: 'Admin1234!' },
+  { role: 'Gestionnaire', email: 'manager@stockmaster.com', password: 'Manager1234!' },
+  { role: 'Magasinier', email: 'operator@stockmaster.com', password: 'Operator1234!' },
+  { role: 'Auditeur', email: 'auditor@stockmaster.com', password: 'Auditor1234!' },
 ]
 function fillDemo(demo: { email: string; password: string }) { email.value = demo.email; password.value = demo.password; error.value = '' }
 async function handleLogin() {
   loading.value = true; error.value = ''
-  const result = await auth.login(email.value, password.value)
-  loading.value = false
-  if (result.success) router.push('/dashboard')
-  else error.value = result.error || 'Erreur de connexion'
+  try {
+    // backend users use username like 'admin' (local-part of email)
+    const username = email.value.includes('@') ? email.value.split('@')[0] : email.value
+    const resp = await AuthService.login({ username, password: password.value })
+    // synchronize local mock store and localStorage
+    auth.token.value = resp.token
+    auth.user.value = {
+      id: resp.user.id,
+      nom: resp.user.fullName?.split(' ').slice(-1).join('') || '',
+      prenom: resp.user.fullName?.split(' ').slice(0, -1).join(' ') || '',
+      email: resp.user.email,
+      role: resp.user.role as any,
+      actif: true,
+      entrepots: [],
+    }
+    localStorage.setItem('sm_token', resp.token)
+    localStorage.setItem('sm_user', JSON.stringify(auth.user.value))
+    router.push('/dashboard')
+  } catch (e: any) {
+    error.value = e?.response?.data?.message || 'Erreur de connexion'
+  } finally {
+    loading.value = false
+  }
 }
+
+function goRegister() { router.push('/register') }
 </script>
 <style scoped>
 input:focus { outline: none; border-color: rgba(16,185,129,0.5) !important; box-shadow: 0 0 0 3px rgba(16,185,129,0.1); }

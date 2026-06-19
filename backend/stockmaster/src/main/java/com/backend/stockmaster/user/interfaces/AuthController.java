@@ -5,6 +5,8 @@ import com.backend.stockmaster.core.security.JwtTokenProvider;
 import com.backend.stockmaster.user.application.dto.AuthResponse;
 import com.backend.stockmaster.user.application.dto.LoginRequest;
 import com.backend.stockmaster.user.application.dto.RefreshTokenRequest;
+import com.backend.stockmaster.user.application.dto.RegisterRequest;
+import com.backend.stockmaster.user.application.service.UserApplicationService;
 import com.backend.stockmaster.user.application.service.RefreshTokenService;
 import com.backend.stockmaster.user.domain.RefreshToken;
 import com.backend.stockmaster.user.domain.User;
@@ -36,6 +38,7 @@ public class AuthController {
     private final RefreshTokenService refreshTokenService;
     private final UserRepository userRepository;
     private final JwtConfig jwtConfig;
+        private final UserApplicationService userApplicationService;
 
     @PostMapping("/login")
     @Operation(summary = "Connexion utilisateur")
@@ -52,6 +55,36 @@ public class AuthController {
 
         User user = userRepository.findByUsername(userDetails.getUsername())
                 .orElseThrow();
+        RefreshToken refreshToken = refreshTokenService.createRefreshToken(user);
+
+        AuthResponse.UserInfo userInfo = AuthResponse.UserInfo.builder()
+                .id(user.getId())
+                .username(user.getUsername())
+                .email(user.getEmail())
+                .fullName(user.getFullName())
+                .role(user.getRole() != null ? user.getRole().name() : null)
+                .build();
+
+        return ResponseEntity.ok(AuthResponse.builder()
+                .token(accessToken)
+                .refreshToken(refreshToken.getToken())
+                .tokenType("Bearer")
+                .expiresIn(jwtConfig.getExpirationMs())
+                .user(userInfo)
+                .build());
+    }
+
+    @PostMapping("/register")
+    @Operation(summary = "Créer un nouvel utilisateur et retourne tokens")
+    public ResponseEntity<AuthResponse> register(@Valid @RequestBody RegisterRequest request) {
+        // Create user (will throw BusinessException on duplicates)
+        var created = userApplicationService.createUser(request);
+
+        // Load entity to create refresh token and build auth response
+        User user = userRepository.findByUsername(created.getUsername()).orElseThrow();
+
+        List<String> roles = List.of("ROLE_" + user.getRole().name());
+        String accessToken = jwtTokenProvider.generateToken(user.getUsername(), roles);
         RefreshToken refreshToken = refreshTokenService.createRefreshToken(user);
 
         AuthResponse.UserInfo userInfo = AuthResponse.UserInfo.builder()
