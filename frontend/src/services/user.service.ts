@@ -1,37 +1,45 @@
-import { api } from './api.config'
+import api from './api'
+
+// Aligne avec l'enum Role backend : ADMINISTRATEUR, GESTIONNAIRE, MAGASINIER, AUDITEUR
+export type Role = 'ADMINISTRATEUR' | 'GESTIONNAIRE' | 'MAGASINIER' | 'AUDITEUR'
 
 export interface User {
   id: number
-  nom: string
-  prenom: string
-  email: string
-  role: string
-  actif: boolean
-  entrepots: string[]
-  createdAt: string
-  lastLogin?: string
+  username: string
+  email?: string
+  fullName?: string
+  role: Role
+  active: boolean
+  createdAt?: string
+  updatedAt?: string
 }
 
 export interface UserCreateDTO {
-  nom: string
-  prenom: string
-  email: string
-  role: string
-  entrepots: string[]
+  username: string
+  password: string
+  email?: string
+  fullName?: string
+  role: Role
 }
 
 export interface UserUpdateDTO {
-  nom?: string
-  prenom?: string
+  username?: string
   email?: string
-  role?: string
-  entrepots?: string[]
-  actif?: boolean
+  fullName?: string
+  role?: Role
+  active?: boolean
+}
+
+export interface PageResponse<T> {
+  content: T[]
+  totalElements: number
+  totalPages: number
+  number: number
 }
 
 export const userService = {
-  async findAll(): Promise<User[]> {
-    const response = await api.get('/users')
+  async findAll(page = 0, size = 50): Promise<PageResponse<User>> {
+    const response = await api.get('/users', { params: { page, size } })
     return response.data
   },
 
@@ -50,7 +58,15 @@ export const userService = {
     return response.data
   },
 
-  async delete(id: number): Promise<void> {
-    await api.delete(`/users/${id}`)
-  }
+  async deactivate(id: number): Promise<void> {
+    await api.patch(`/users/${id}/deactivate`)
+  },
+
+  async activate(id: number): Promise<void> {
+    await api.patch(`/users/${id}/activate`)
+  },
+
+  async resetPassword(id: number, newPassword: string): Promise<void> {
+    await api.post(`/users/${id}/reset-password`, { newPassword })
+  },
 }

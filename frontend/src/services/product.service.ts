@@ -3,12 +3,12 @@ import api from './api'
 export interface Product {
   id: number
   reference: string
-  codeBarres?: string
+  codeBarre?: string
   nom: string
-  description: string
-  categorieId: number
+  description?: string
+  categorieId?: number
   categorieNom?: string
-  fournisseurId?: number
+  fournisseurPrincipalId?: number
   fournisseurNom?: string
   prixAchat?: number
   prixVente?: number
@@ -19,16 +19,15 @@ export interface Product {
   uniteMesure: string
   actif: boolean
   imageUrl?: string
-  stockTotal?: number
-  stockStatut?: string
+  niveauStock?: string
 }
 
 export interface ProductCreateDTO {
   nom: string
-  description: string
+  description?: string
   categorieId: number
-  codeBarres?: string
-  fournisseurId?: number
+  codeBarre?: string
+  fournisseurPrincipalId?: number
   prixAchat?: number
   prixVente?: number
   poidsKg?: number
@@ -40,9 +39,19 @@ export interface ProductCreateDTO {
 
 export interface ProductUpdateDTO extends ProductCreateDTO {}
 
+export interface PageResponse<T> {
+  content: T[]
+  totalElements: number
+  totalPages: number
+  number: number
+  size: number
+}
+
 const ProductService = {
-  async getAll(page = 0, size = 20): Promise<{ content: Product[], totalElements: number }> {
-    const { data } = await api.get(`/products?page=${page}&size=${size}`)
+  async getAll(page = 0, size = 20, categorieId?: number, fournisseurId?: number): Promise<PageResponse<Product>> {
+    const { data } = await api.get('/products', {
+      params: { page, size, ...(categorieId ? { categorieId } : {}), ...(fournisseurId ? { fournisseurId } : {}) },
+    })
     return data
   },
 
@@ -61,14 +70,23 @@ const ProductService = {
     return data
   },
 
-  async delete(id: number): Promise<void> {
+  async deactivate(id: number): Promise<void> {
     await api.patch(`/products/${id}/deactivate`)
   },
 
-  async search(query: string): Promise<Product[]> {
-    const { data } = await api.get(`/products/search?q=${encodeURIComponent(query)}`)
+  async search(query: string, page = 0, size = 20): Promise<PageResponse<Product>> {
+    const { data } = await api.get('/products/search', { params: { q: query, page, size } })
     return data
-  }
+  },
+
+  async uploadImage(id: number, file: File): Promise<Product> {
+    const formData = new FormData()
+    formData.append('image', file)
+    const { data } = await api.post(`/products/${id}/image`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    })
+    return data
+  },
 }
 
 export default ProductService

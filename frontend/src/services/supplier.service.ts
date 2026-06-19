@@ -1,4 +1,4 @@
-import { api } from './api.config'
+import api from './api'
 
 export interface Supplier {
   id: number
@@ -9,15 +9,12 @@ export interface Supplier {
   pays: string
   telephone?: string
   email?: string
-  contactNom?: string
-  contactPrenom?: string
-  contactTelephone?: string
-  contactEmail?: string
-  delaiLivraison: number
+  contactPrincipalNom?: string
+  contactPrincipalPrenom?: string
+  contactPrincipalTelephone?: string
+  contactPrincipalEmail?: string
+  delaiLivraisonJours: number
   actif: boolean
-  commandesTotal: number
-  tauxRespectDelai: number
-  montantTotal: number
 }
 
 export interface SupplierCreateDTO {
@@ -27,11 +24,11 @@ export interface SupplierCreateDTO {
   pays: string
   telephone?: string
   email?: string
-  contactNom?: string
-  contactPrenom?: string
-  contactTelephone?: string
-  contactEmail?: string
-  delaiLivraison: number
+  contactPrincipalNom?: string
+  contactPrincipalPrenom?: string
+  contactPrincipalTelephone?: string
+  contactPrincipalEmail?: string
+  delaiLivraisonJours: number
 }
 
 export interface SupplierUpdateDTO {
@@ -41,18 +38,32 @@ export interface SupplierUpdateDTO {
   pays?: string
   telephone?: string
   email?: string
-  contactNom?: string
-  contactPrenom?: string
-  contactTelephone?: string
-  contactEmail?: string
-  delaiLivraison?: number
+  contactPrincipalNom?: string
+  contactPrincipalPrenom?: string
+  contactPrincipalTelephone?: string
+  contactPrincipalEmail?: string
+  delaiLivraisonJours?: number
   actif?: boolean
 }
 
+export interface PageResponse<T> {
+  content: T[]
+  totalElements: number
+  totalPages: number
+  number: number
+  size: number
+}
+
 export const supplierService = {
-  async findAll(): Promise<Supplier[]> {
-    const response = await api.get('/suppliers')
+  async findAll(page = 0, size = 100): Promise<PageResponse<Supplier>> {
+    const response = await api.get('/suppliers', { params: { page, size } })
     return response.data
+  },
+
+  /** Raccourci pour les selects / listes simples */
+  async findAllList(): Promise<Supplier[]> {
+    const page = await supplierService.findAll(0, 200)
+    return page.content
   },
 
   async findById(id: number): Promise<Supplier> {
@@ -70,7 +81,7 @@ export const supplierService = {
     return response.data
   },
 
-  async delete(id: number): Promise<void> {
-    await api.delete(`/suppliers/${id}`)
-  }
+  async deactivate(id: number): Promise<void> {
+    await api.patch(`/suppliers/${id}/deactivate`)
+  },
 }

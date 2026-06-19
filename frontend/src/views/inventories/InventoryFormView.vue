@@ -31,13 +31,36 @@
   </div>
 </template>
 <script setup lang="ts">
-import { reactive, computed } from 'vue'
+import { reactive, computed, onMounted, ref } from 'vue'
 import { RouterLink, useRouter } from 'vue-router'
 import PageHeader from '@/components/common/PageHeader.vue'
-import { WAREHOUSES, ZONES } from '@/services/mockData'
+import WarehouseService, { type Warehouse } from '@/services/warehouse.service'
+import { inventoryService } from '@/services/operations.service'
 const router = useRouter()
-const warehouses = WAREHOUSES.filter(w => w.actif)
-const form = reactive({ type: 'COMPLET', entrepotId: warehouses[0]?.id ?? 1, zoneId: null as number | null, datePlanifiee: new Date().toISOString().slice(0,10), note: '' })
-const zones = computed(() => ZONES.filter(z => z.entrepotId === form.entrepotId))
-function submit() { router.push('/inventories') }
+const warehouses = reactive<Warehouse[]>([])
+const loading = ref(false)
+const form = reactive({ type: 'COMPLET', entrepotId: null as number | null, zoneId: null as number | null, datePlanifiee: new Date().toISOString().slice(0,10), note: '' })
+const zones = computed(() => [])
+onMounted(async () => {
+  warehouses.push(...(await WarehouseService.getAll()).filter(w => w.actif))
+  if (warehouses.length > 0) form.entrepotId = warehouses[0].id
+})
+async function submit() {
+  if (!form.entrepotId || !form.datePlanifiee) return
+  loading.value = true
+  try {
+    await inventoryService.create({
+      entrepotId: form.entrepotId,
+      zoneId: form.zoneId || undefined,
+      type: form.type,
+      datePlanifiee: form.datePlanifiee,
+      note: form.note || undefined
+    })
+    router.push('/inventories')
+  } catch (e) {
+    console.error(e)
+  } finally {
+    loading.value = false
+  }
+}
 </script>

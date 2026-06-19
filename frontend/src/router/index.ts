@@ -64,12 +64,12 @@ const router = createRouter({
   ],
 })
 
-router.beforeEach((to, _from, next) => {
+router.beforeEach((to) => {
   const auth = useAuthStore()
-  if (to.meta.requiresAuth && !auth.isAuthenticated) return next('/login')
-  if (to.meta.guest && auth.isAuthenticated) return next('/dashboard')
-  if (to.meta.roles && !auth.hasAnyRole(to.meta.roles as string[])) return next('/dashboard')
-  next()
+  if (to.meta.requiresAuth && !auth.isAuthenticated) return '/login'
+  if (to.meta.guest && auth.isAuthenticated) return '/dashboard'
+  if (to.meta.roles && !auth.hasAnyRole(to.meta.roles as string[])) return '/dashboard'
+  return true
 })
 
 export default router

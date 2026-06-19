@@ -2,6 +2,8 @@ package com.backend.stockmaster.zone.application.service;
 
 import com.backend.stockmaster.core.exception.BusinessException;
 import com.backend.stockmaster.core.exception.ResourceNotFoundException;
+import com.backend.stockmaster.location.repository.LocationRepository;
+import com.backend.stockmaster.location.domain.LocationStatus;
 import com.backend.stockmaster.warehouse.repository.WarehouseRepository;
 import com.backend.stockmaster.zone.application.dto.ZoneCreateDTO;
 import com.backend.stockmaster.zone.application.dto.ZoneDTO;
@@ -24,6 +26,7 @@ public class ZoneApplicationService {
     private final ZoneRepository zoneRepository;
     private final ZoneMapper zoneMapper;
     private final WarehouseRepository warehouseRepository;
+    private final LocationRepository locationRepository;
 
     public List<ZoneDTO> findByWarehouse(Long warehouseId) {
         warehouseRepository.findById(warehouseId)
@@ -44,14 +47,16 @@ public class ZoneApplicationService {
         double taux = zone.getCapaciteM3() > 0
                 ? (zone.getOccupationM3() / zone.getCapaciteM3()) * 100
                 : 0.0;
+        long total = locationRepository.countByZoneId(id);
+        long libres = locationRepository.countByZoneIdAndStatut(id, LocationStatus.LIBRE);
         return ZoneOccupancyDTO.builder()
                 .zoneId(zone.getId())
                 .nom(zone.getNom())
                 .capaciteM3(zone.getCapaciteM3())
                 .occupationM3(zone.getOccupationM3())
                 .tauxOccupation(Math.round(taux * 10.0) / 10.0)
-                .nombreEmplacements(0)
-                .emplacementsLibres(0)
+                .nombreEmplacements(total)
+                .emplacementsLibres(libres)
                 .build();
     }
 

@@ -57,6 +57,13 @@ public class ProductService {
         productRepository.save(product);
     }
 
+    @Transactional
+    public ProductDTO updateImageUrl(Long id, String imageUrl) {
+        Product product = findOrThrow(id);
+        product.setImageUrl(imageUrl);
+        return enrich(productMapper.toDTO(productRepository.save(product)));
+    }
+
     public Page<ProductDTO> findAll(Pageable pageable, Long categorieId, Long fournisseurId) {
         Page<Product> products;
         if (categorieId != null) {

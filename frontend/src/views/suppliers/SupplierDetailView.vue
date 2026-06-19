@@ -73,16 +73,25 @@
   </div>
 </template>
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { Edit3, MapPin, Phone, Mail, ShoppingCart } from 'lucide-vue-next'
 import PageHeader from '@/components/common/PageHeader.vue'
 import StatusBadge from '@/components/common/StatusBadge.vue'
-import { SUPPLIERS, PURCHASE_ORDERS, formatCurrency, formatDate } from '@/services/mockData'
+import { formatCurrency, formatDate } from '@/utils/formatters'
+import { purchaseOrderService } from '@/services/operations.service'
 import { usePermissions } from '@/composables/usePermissions'
 const { can } = usePermissions()
 const route = useRoute()
-const id = Number(route.params.id)
-const supplier = SUPPLIERS.find(s => s.id === id) || SUPPLIERS[0]
-const supplierOrders = computed(() => PURCHASE_ORDERS.filter(o => o.fournisseurId === supplier.id))
+const supplier = ref<Supplier | null>(null)
+onMounted(async () => {
+  supplier.value = await supplierService.findById(Number(route.params.id))
+})
+const supplierOrders = ref<any[]>([])
+onMounted(async () => {
+  if (supplier.value) {
+    const page = await purchaseOrderService.findAll(0, 100)
+    supplierOrders.value = page.content.filter((o: any) => o.fournisseurId === supplier.value!.id)
+  }
+})
 </script>

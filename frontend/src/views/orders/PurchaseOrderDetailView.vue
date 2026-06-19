@@ -47,15 +47,18 @@
   </div>
 </template>
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { formatDate, formatCurrency } from '@/utils/formatters'
+import { purchaseOrderService, type PurchaseOrder } from '@/services/operations.service'
+import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { CheckCircle2, Send } from 'lucide-vue-next'
 import PageHeader from '@/components/common/PageHeader.vue'
 import StatusBadge from '@/components/common/StatusBadge.vue'
-import { PURCHASE_ORDERS, formatDate, formatCurrency } from '@/services/mockData'
 import { usePermissions } from '@/composables/usePermissions'
 const { can } = usePermissions()
 const route = useRoute()
-const order = ref({ ...(PURCHASE_ORDERS.find(o => o.id === Number(route.params.id)) || PURCHASE_ORDERS[0]) })
-const isLate = computed(() => order.value.dateLivraisonPrevue && !order.value.dateLivraisonReelle && ['ENVOYEE','PARTIELLEMENT_LIVREE'].includes(order.value.statut) && new Date(order.value.dateLivraisonPrevue) < new Date())
+const order = ref<PurchaseOrder | null>(null)
+onMounted(async () => {
+  order.value = await purchaseOrderService.findById(Number(route.params.id))
+})
 </script>

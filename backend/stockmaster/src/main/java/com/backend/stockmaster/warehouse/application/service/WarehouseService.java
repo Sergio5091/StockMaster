@@ -2,10 +2,12 @@ package com.backend.stockmaster.warehouse.application.service;
 
 import com.backend.stockmaster.core.exception.ResourceNotFoundException;
 import com.backend.stockmaster.user.repository.UserRepository;
+import com.backend.stockmaster.stock.repository.StockRepository;
 import com.backend.stockmaster.warehouse.application.dto.*;
 import com.backend.stockmaster.warehouse.application.mapper.WarehouseMapper;
 import com.backend.stockmaster.warehouse.domain.Warehouse;
 import com.backend.stockmaster.warehouse.repository.WarehouseRepository;
+import com.backend.stockmaster.zone.repository.ZoneRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -20,6 +22,8 @@ public class WarehouseService {
     private final WarehouseRepository warehouseRepository;
     private final WarehouseMapper warehouseMapper;
     private final UserRepository userRepository;
+    private final ZoneRepository zoneRepository;
+    private final StockRepository stockRepository;
 
     @Transactional
     public WarehouseDTO createWarehouse(WarehouseCreateDTO dto) {
@@ -56,14 +60,26 @@ public class WarehouseService {
 
     public WarehouseStatsDTO getStats(Long id) {
         Warehouse warehouse = findOrThrow(id);
+        double capaciteUtilisee = 0.0;
+        for (var zone : zoneRepository.findByEntrepotId(warehouse.getId())) {
+            Double occupation = zone.getOccupationM3();
+            capaciteUtilisee += occupation != null ? occupation : 0.0;
+        }
+        long nombreZones = zoneRepository.countByEntrepotIdAndActifTrue(warehouse.getId());
+        long nombreProduits = stockRepository.findByEntrepotId(warehouse.getId()).stream()
+                .map(stock -> stock.getProduitId())
+                .distinct()
+                .count();
         return WarehouseStatsDTO.builder()
                 .warehouseId(warehouse.getId())
                 .nom(warehouse.getNom())
                 .capaciteTotale(warehouse.getCapaciteTotale())
-                .capaciteUtilisee(0.0)
-                .tauxOccupation(0.0)
-                .nombreZones(0L)
-                .nombreProduits(0L)
+                .capaciteUtilisee(capaciteUtilisee)
+                .tauxOccupation(warehouse.getCapaciteTotale() != null && warehouse.getCapaciteTotale() > 0
+                        ? Math.round((capaciteUtilisee / warehouse.getCapaciteTotale()) * 1000.0) / 10.0
+                        : 0.0)
+                .nombreZones(nombreZones)
+                .nombreProduits(nombreProduits)
                 .build();
     }
 

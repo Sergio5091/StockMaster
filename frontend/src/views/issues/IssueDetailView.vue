@@ -44,16 +44,18 @@
   </div>
 </template>
 <script setup lang="ts">
-import { ref } from 'vue'
+import { formatDate, formatCurrency } from '@/utils/formatters'
+import { issueService, type Issue } from '@/services/operations.service'
+import { ref, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { CheckCircle2, XCircle } from 'lucide-vue-next'
 import PageHeader from '@/components/common/PageHeader.vue'
 import StatusBadge from '@/components/common/StatusBadge.vue'
-import { ISSUES, formatDate, formatCurrency } from '@/services/mockData'
 import { usePermissions } from '@/composables/usePermissions'
 const { can } = usePermissions()
 const route = useRoute()
-const issue = ref({ ...(ISSUES.find(i => i.id === Number(route.params.id)) || ISSUES[0]) })
-function validate() { issue.value.statut = 'VALIDE' }
-function cancel() { issue.value.statut = 'ANNULE' }
+const issue = ref<Issue | null>(null)
+onMounted(async () => {
+  issue.value = await issueService.findById(Number(route.params.id))
+})
 </script>

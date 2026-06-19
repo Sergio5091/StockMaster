@@ -41,14 +41,18 @@
   </div>
 </template>
 <script setup lang="ts">
-import { ref } from 'vue'
+import { formatDate } from '@/utils/formatters'
+import { transferService, type Transfer } from '@/services/operations.service'
+import { ref, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { Truck, CheckCircle2 } from 'lucide-vue-next'
 import PageHeader from '@/components/common/PageHeader.vue'
 import StatusBadge from '@/components/common/StatusBadge.vue'
-import { TRANSFERS, formatDate } from '@/services/mockData'
 import { usePermissions } from '@/composables/usePermissions'
 const { can } = usePermissions()
 const route = useRoute()
-const transfer = ref({ ...(TRANSFERS.find(t => t.id === Number(route.params.id)) || TRANSFERS[0]) })
+const transfer = ref<Transfer | null>(null)
+onMounted(async () => {
+  transfer.value = await transferService.findById(Number(route.params.id))
+})
 </script>

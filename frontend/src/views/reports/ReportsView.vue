@@ -4,12 +4,10 @@
 
     <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
 
-      <!-- Report: Mouvements de stock -->
+      <!-- Mouvements de stock -->
       <div class="card-premium rounded-2xl p-5">
         <div class="flex items-center gap-3 mb-4">
-          <div class="w-10 h-10 rounded-xl bg-emerald-100 flex items-center justify-center">
-            <ArrowLeftRight :size="18" class="text-emerald-600" />
-          </div>
+          <div class="w-10 h-10 rounded-xl bg-emerald-100 flex items-center justify-center"><ArrowLeftRight :size="18" class="text-emerald-600" /></div>
           <div>
             <div class="font-semibold text-foreground">Mouvements de stock</div>
             <div class="text-xs text-muted-foreground">Entrées, sorties, transferts, ajustements</div>
@@ -21,98 +19,54 @@
             <div><label class="label-field">Au</label><input v-model="reports.movements.dateTo" type="date" class="input-field" /></div>
           </div>
           <div><label class="label-field">Entrepôt</label>
-            <select v-model="reports.movements.entrepot" class="select-field">
+            <select v-model="reports.movements.entrepotId" class="select-field">
               <option value="">Tous</option>
-              <option v-for="w in warehouses" :key="w.id">{{ w.nom }}</option>
+              <option v-for="w in warehouses" :key="w.id" :value="w.id">{{ w.nom }}</option>
             </select>
           </div>
-          <div><label class="label-field">Type de mouvement</label>
+          <div><label class="label-field">Type</label>
             <select v-model="reports.movements.type" class="select-field">
               <option value="">Tous</option>
               <option value="ENTREE">Entrées</option>
               <option value="SORTIE">Sorties</option>
-              <option value="TRANSFERT">Transferts</option>
-              <option value="AJUSTEMENT">Ajustements</option>
+              <option value="TRANSFERT_SORTANT">Transferts</option>
+              <option value="AJUSTEMENT_INVENTAIRE">Ajustements</option>
             </select>
           </div>
         </div>
         <div class="flex gap-2">
-          <button @click="download('movements','excel')" class="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-semibold hover:bg-emerald-100 transition-colors"><FileSpreadsheet :size="13" /> Excel</button>
-          <button @click="download('movements','csv')" class="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl bg-muted border border-border text-muted-foreground text-xs font-medium hover:bg-muted/80 transition-colors"><FileText :size="13" /> CSV</button>
-          <button @click="download('movements','pdf')" class="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl bg-red-50 border border-red-200 text-red-600 text-xs font-medium hover:bg-red-100 transition-colors"><FileDown :size="13" /> PDF</button>
+          <button @click="download('movements','csv')" :disabled="downloading" class="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl bg-muted border border-border text-muted-foreground text-xs font-medium hover:bg-muted/80 transition-colors disabled:opacity-50"><FileText :size="13" /> CSV</button>
+          <button @click="download('movements','json')" :disabled="downloading" class="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-semibold hover:bg-emerald-100 transition-colors disabled:opacity-50"><FileDown :size="13" /> JSON</button>
         </div>
       </div>
 
-      <!-- Report: État des stocks -->
+      <!-- État des stocks -->
       <div class="card-premium rounded-2xl p-5">
         <div class="flex items-center gap-3 mb-4">
-          <div class="w-10 h-10 rounded-xl bg-blue-100 flex items-center justify-center">
-            <BarChart3 :size="18" class="text-blue-600" />
-          </div>
+          <div class="w-10 h-10 rounded-xl bg-blue-100 flex items-center justify-center"><BarChart3 :size="18" class="text-blue-600" /></div>
           <div>
             <div class="font-semibold text-foreground">État des stocks</div>
-            <div class="text-xs text-muted-foreground">Niveaux de stock à une date donnée</div>
+            <div class="text-xs text-muted-foreground">Niveaux de stock par entrepôt</div>
           </div>
         </div>
         <div class="space-y-3 mb-4">
-          <div><label class="label-field">Date de référence</label><input v-model="reports.stock.date" type="date" class="input-field" /></div>
           <div><label class="label-field">Entrepôt</label>
-            <select v-model="reports.stock.entrepot" class="select-field">
+            <select v-model="reports.stock.entrepotId" class="select-field">
               <option value="">Tous</option>
-              <option v-for="w in warehouses" :key="w.id">{{ w.nom }}</option>
-            </select>
-          </div>
-          <div><label class="label-field">Catégorie</label>
-            <select v-model="reports.stock.categorie" class="select-field">
-              <option value="">Toutes</option>
-              <option value="Informatique">Informatique</option>
-              <option value="Électronique">Électronique</option>
-              <option value="Mobilier Bureau">Mobilier Bureau</option>
+              <option v-for="w in warehouses" :key="w.id" :value="w.id">{{ w.nom }}</option>
             </select>
           </div>
         </div>
         <div class="flex gap-2">
-          <button @click="download('stock','excel')" class="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-semibold hover:bg-emerald-100 transition-colors"><FileSpreadsheet :size="13" /> Excel</button>
-          <button @click="download('stock','csv')" class="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl bg-muted border border-border text-muted-foreground text-xs font-medium hover:bg-muted/80 transition-colors"><FileText :size="13" /> CSV</button>
-          <button @click="download('stock','pdf')" class="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl bg-red-50 border border-red-200 text-red-600 text-xs font-medium hover:bg-red-100 transition-colors"><FileDown :size="13" /> PDF</button>
+          <button @click="download('stock','csv')" :disabled="downloading" class="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl bg-muted border border-border text-muted-foreground text-xs font-medium hover:bg-muted/80 transition-colors disabled:opacity-50"><FileText :size="13" /> CSV</button>
+          <button @click="download('stock','json')" :disabled="downloading" class="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-semibold hover:bg-emerald-100 transition-colors disabled:opacity-50"><FileDown :size="13" /> JSON</button>
         </div>
       </div>
 
-      <!-- Report: Fournisseurs -->
+      <!-- Inventaires -->
       <div class="card-premium rounded-2xl p-5">
         <div class="flex items-center gap-3 mb-4">
-          <div class="w-10 h-10 rounded-xl bg-purple-100 flex items-center justify-center">
-            <Truck :size="18" class="text-purple-600" />
-          </div>
-          <div>
-            <div class="font-semibold text-foreground">Rapport fournisseurs</div>
-            <div class="text-xs text-muted-foreground">Performance, délais, commandes</div>
-          </div>
-        </div>
-        <div class="space-y-3 mb-4">
-          <div class="grid grid-cols-2 gap-3">
-            <div><label class="label-field">Du</label><input v-model="reports.suppliers.dateFrom" type="date" class="input-field" /></div>
-            <div><label class="label-field">Au</label><input v-model="reports.suppliers.dateTo" type="date" class="input-field" /></div>
-          </div>
-          <div><label class="label-field">Fournisseur</label>
-            <select v-model="reports.suppliers.fournisseur" class="select-field">
-              <option value="">Tous</option>
-              <option v-for="s in suppliers" :key="s.id">{{ s.nom }}</option>
-            </select>
-          </div>
-        </div>
-        <div class="flex gap-2">
-          <button @click="download('suppliers','excel')" class="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-semibold hover:bg-emerald-100 transition-colors"><FileSpreadsheet :size="13" /> Excel</button>
-          <button @click="download('suppliers','pdf')" class="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl bg-red-50 border border-red-200 text-red-600 text-xs font-medium hover:bg-red-100 transition-colors"><FileDown :size="13" /> PDF</button>
-        </div>
-      </div>
-
-      <!-- Report: Inventaire -->
-      <div class="card-premium rounded-2xl p-5">
-        <div class="flex items-center gap-3 mb-4">
-          <div class="w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center">
-            <ClipboardList :size="18" class="text-amber-600" />
-          </div>
+          <div class="w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center"><ClipboardList :size="18" class="text-amber-600" /></div>
           <div>
             <div class="font-semibold text-foreground">Rapport d'inventaire</div>
             <div class="text-xs text-muted-foreground">Résultats de comptage et écarts</div>
@@ -126,13 +80,35 @@
           </div>
         </div>
         <div class="flex gap-2">
-          <button @click="download('inventory','excel')" class="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-semibold hover:bg-emerald-100 transition-colors"><FileSpreadsheet :size="13" /> Excel</button>
-          <button @click="download('inventory','pdf')" class="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl bg-red-50 border border-red-200 text-red-600 text-xs font-medium hover:bg-red-100 transition-colors"><FileDown :size="13" /> PDF</button>
+          <button @click="download('inventory','json')" :disabled="downloading || !reports.inventory.id" class="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-semibold hover:bg-emerald-100 transition-colors disabled:opacity-50"><FileDown :size="13" /> JSON</button>
+        </div>
+      </div>
+
+      <!-- Commandes -->
+      <div class="card-premium rounded-2xl p-5">
+        <div class="flex items-center gap-3 mb-4">
+          <div class="w-10 h-10 rounded-xl bg-purple-100 flex items-center justify-center"><ShoppingCart :size="18" class="text-purple-600" /></div>
+          <div>
+            <div class="font-semibold text-foreground">Commandes fournisseurs</div>
+            <div class="text-xs text-muted-foreground">Historique et statuts</div>
+          </div>
+        </div>
+        <div class="space-y-3 mb-4">
+          <div><label class="label-field">Statut</label>
+            <select v-model="reports.orders.statut" class="select-field">
+              <option value="">Tous</option>
+              <option value="ENVOYEE">Envoyées</option>
+              <option value="LIVREE">Livrées</option>
+              <option value="ANNULEE">Annulées</option>
+            </select>
+          </div>
+        </div>
+        <div class="flex gap-2">
+          <button @click="download('orders','json')" :disabled="downloading" class="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-semibold hover:bg-emerald-100 transition-colors disabled:opacity-50"><FileDown :size="13" /> JSON</button>
         </div>
       </div>
     </div>
 
-    <!-- Toast -->
     <Teleport to="body">
       <div v-if="toast" class="fixed bottom-5 right-5 z-50 flex items-center gap-3 px-5 py-3 rounded-2xl bg-foreground text-background shadow-xl text-sm font-medium">
         <Download :size="16" /> {{ toast }}
@@ -141,28 +117,79 @@
   </div>
 </template>
 <script setup lang="ts">
-import { reactive, ref } from 'vue'
-import { ArrowLeftRight, BarChart3, Truck, ClipboardList, FileSpreadsheet, FileText, FileDown, Download } from 'lucide-vue-next'
+import { reactive, ref, onMounted } from 'vue'
+import { ArrowLeftRight, BarChart3, ClipboardList, ShoppingCart, FileText, FileDown, Download } from 'lucide-vue-next'
 import PageHeader from '@/components/common/PageHeader.vue'
-import { WAREHOUSES, SUPPLIERS, INVENTORIES } from '@/services/mockData'
+import WarehouseService from '@/services/warehouse.service'
+import { inventoryService, purchaseOrderService } from '@/services/operations.service'
+import api from '@/services/api'
 
-const warehouses = WAREHOUSES.filter(w => w.actif)
-const suppliers = SUPPLIERS.filter(s => s.actif)
-const inventories = INVENTORIES
+const warehouses = ref<any[]>([])
+const inventories = ref<any[]>([])
+const downloading = ref(false)
+const toast = ref('')
 
 const today = new Date().toISOString().slice(0, 10)
 const firstDay = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().slice(0, 10)
 
 const reports = reactive({
-  movements: { dateFrom: firstDay, dateTo: today, entrepot: '', type: '' },
-  stock: { date: today, entrepot: '', categorie: '' },
-  suppliers: { dateFrom: firstDay, dateTo: today, fournisseur: '' },
-  inventory: { id: inventories[0]?.id ?? 1 },
+  movements: { dateFrom: firstDay, dateTo: today, entrepotId: '', type: '' },
+  stock: { entrepotId: '' },
+  inventory: { id: 0 },
+  orders: { statut: '' },
 })
 
-const toast = ref('')
-function download(type: string, format: string) {
-  toast.value = `Génération du rapport "${type}" en ${format.toUpperCase()}…`
-  setTimeout(() => { toast.value = '' }, 3000)
+async function download(type: string, format: string) {
+  downloading.value = true
+  toast.value = `Génération du rapport "${type}"…`
+  try {
+    let data: any[] = []
+    if (type === 'movements') {
+      const res = await api.get('/stocks/movements', { params: { page: 0, size: 1000 } })
+      data = res.data.content || []
+      if (reports.movements.entrepotId) data = data.filter((m: any) => m.entrepotSourceId == reports.movements.entrepotId || m.entrepotDestinationId == reports.movements.entrepotId)
+      if (reports.movements.type) data = data.filter((m: any) => m.type === reports.movements.type)
+    } else if (type === 'stock') {
+      const res = await api.get('/stocks', { params: { page: 0, size: 1000 } })
+      data = res.data.content || []
+      if (reports.stock.entrepotId) data = data.filter((s: any) => s.entrepotId == reports.stock.entrepotId)
+    } else if (type === 'inventory' && reports.inventory.id) {
+      const inv = await inventoryService.findById(reports.inventory.id)
+      data = inv.lignes || []
+    } else if (type === 'orders') {
+      const res = await purchaseOrderService.findAll(0, 1000)
+      data = res.content
+      if (reports.orders.statut) data = data.filter((o: any) => o.statut === reports.orders.statut)
+    }
+
+    const content = format === 'csv' ? toCSV(data) : JSON.stringify(data, null, 2)
+    const mime = format === 'csv' ? 'text/csv' : 'application/json'
+    const blob = new Blob([content], { type: mime })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a'); a.href = url; a.download = `${type}-${today}.${format}`; a.click()
+    URL.revokeObjectURL(url)
+    toast.value = `Rapport "${type}" téléchargé ✓`
+  } catch {
+    toast.value = 'Erreur lors de la génération du rapport'
+  } finally {
+    downloading.value = false
+    setTimeout(() => { toast.value = '' }, 3000)
+  }
 }
+
+function toCSV(data: any[]) {
+  if (!data.length) return ''
+  const headers = Object.keys(data[0]).join(';')
+  const rows = data.map(row => Object.values(row).map(v => `"${v ?? ''}"`).join(';'))
+  return [headers, ...rows].join('\n')
+}
+
+onMounted(async () => {
+  const [whs, invs] = await Promise.allSettled([WarehouseService.getAll(), inventoryService.findAll(0, 100)])
+  if (whs.status === 'fulfilled') warehouses.value = whs.value.filter((w: any) => w.actif)
+  if (invs.status === 'fulfilled') {
+    inventories.value = invs.value.content
+    if (inventories.value.length) reports.inventory.id = inventories.value[0].id
+  }
+})
 </script>

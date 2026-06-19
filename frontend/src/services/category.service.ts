@@ -1,4 +1,4 @@
-import { api } from './api.config'
+import api from './api'
 
 export interface Category {
   id: number
@@ -7,8 +7,6 @@ export interface Category {
   parentId?: number
   parentNom?: string
   actif: boolean
-  createdAt: string
-  updatedAt: string
 }
 
 export interface CategoryCreateDTO {
@@ -51,5 +49,5 @@ export const categoryService = {
 
   async delete(id: number): Promise<void> {
     await api.delete(`/categories/${id}`)
-  }
+  },
 }

@@ -48,14 +48,47 @@
   </div>
 </template>
 <script setup lang="ts">
-import { reactive } from 'vue'
+import { reactive, onMounted, ref } from 'vue'
 import { RouterLink, useRouter } from 'vue-router'
 import { Plus, Package, Trash2 } from 'lucide-vue-next'
 import PageHeader from '@/components/common/PageHeader.vue'
-import { SUPPLIERS, WAREHOUSES, PRODUCTS } from '@/services/mockData'
+import { supplierService, type Supplier } from '@/services/supplier.service'
+import WarehouseService, { type Warehouse } from '@/services/warehouse.service'
+import ProductService, { type Product } from '@/services/product.service'
+import { receiptService } from '@/services/operations.service'
 const router = useRouter()
-const suppliers = SUPPLIERS.filter(s => s.actif); const warehouses = WAREHOUSES.filter(w => w.actif); const products = PRODUCTS
+const suppliers = reactive<Supplier[]>([])
+const warehouses = reactive<Warehouse[]>([])
+const products = reactive<Product[]>([])
+const loading = ref(false)
+onMounted(async () => {
+  suppliers.push(...(await supplierService.findAllList()).filter(s => s.actif))
+  warehouses.push(...(await WarehouseService.getAll()).filter(w => w.actif))
+  products.push(...(await ProductService.getAll(0, 200)).content.filter(p => p.actif))
+})
 const form = reactive({ fournisseurId: null as number | null, entrepotId: warehouses[0]?.id ?? 1, dateReception: new Date().toISOString().slice(0, 10), note: '', lignes: [] as { produitRef: string; qteAttendue: number; qteRecue: number; qualiteOk: boolean }[] })
 function addLine() { form.lignes.push({ produitRef: products[0]?.reference ?? '', qteAttendue: 0, qteRecue: 0, qualiteOk: true }) }
-function submit() { router.push('/receipts') }
+async function submit() {
+  if (!form.fournisseurId || !form.entrepotId || !form.lignes.length) return
+  loading.value = true
+  try {
+    await receiptService.create({
+      fournisseurId: form.fournisseurId,
+      entrepotId: form.entrepotId,
+      dateReception: form.dateReception,
+      note: form.note,
+      lignes: form.lignes.map(l => ({
+        produitId: products.find(p => p.reference === l.produitRef)!.id,
+        quantiteAttendue: l.qteAttendue,
+        quantiteRecue: l.qteRecue,
+        qualiteOk: l.qualiteOk
+      }))
+    })
+    router.push('/receipts')
+  } catch (e) {
+    console.error(e)
+  } finally {
+    loading.value = false
+  }
+}
 </script>

@@ -14,6 +14,13 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/products")
@@ -71,5 +78,20 @@ public class ProductController {
     public ResponseEntity<Void> deactivate(@PathVariable Long id) {
         productService.deactivateProduct(id);
         return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/{id}/image")
+    @PreAuthorize("hasRole('ADMINISTRATEUR') or hasRole('GESTIONNAIRE')")
+    @Operation(summary = "Uploader une image pour un produit")
+    public ResponseEntity<ProductDTO> uploadImage(
+            @PathVariable Long id,
+            @RequestParam("image") MultipartFile file) throws IOException {
+        String uploadDir = "uploads/products/";
+        Files.createDirectories(Paths.get(uploadDir));
+        String filename = UUID.randomUUID() + "_" + file.getOriginalFilename();
+        Path dest = Paths.get(uploadDir + filename);
+        Files.copy(file.getInputStream(), dest);
+        String imageUrl = "/uploads/products/" + filename;
+        return ResponseEntity.ok(productService.updateImageUrl(id, imageUrl));
     }
 }
