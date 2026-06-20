@@ -12,6 +12,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -87,6 +89,53 @@ public class StockApplicationService {
     @Transactional
     public void decreaseStock(Long produitId, Long entrepotId, int quantite, String reference, String note) {
         removeStock(produitId, entrepotId, quantite, MovementType.SORTIE, reference, null, note);
+    }
+
+    /**
+     * Ajustement manuel : quantite > 0 = entrée, quantite < 0 = sortie.
+     * Le type peut être forcé explicitement via le request.
+     */
+    @Transactional
+    public StockMovementDTO ajusterStock(StockUpdateRequest req) {
+        if (req.getQuantite() == null || req.getQuantite() == 0)
+            throw new BusinessException("La quantité d'ajustement ne peut pas être zéro");
+
+        MovementType type = req.getType();
+        if (type == null) {
+            type = req.getQuantite() > 0 ? MovementType.ENTREE : MovementType.SORTIE;
+        }
+
+        int qte = Math.abs(req.getQuantite());
+        String reference = "AJUST-" + System.currentTimeMillis();
+
+        if (req.getQuantite() > 0) {
+            addStock(req.getProduitId(), req.getEntrepotId(), qte, type, reference, null, req.getJustification());
+        } else {
+            removeStock(req.getProduitId(), req.getEntrepotId(), qte, type, reference, null, req.getJustification());
+        }
+
+        return stockMovementRepository
+                .findByReferenceDocument(reference)
+                .stream()
+                .findFirst()
+                .map(this::toMovementDTO)
+                .orElseThrow(() -> new BusinessException("Erreur lors de la création du mouvement"));
+    }
+
+    public Page<StockMovementDTO> findMovementsByEntrepot(Long entrepotId, Pageable pageable) {
+        return stockMovementRepository
+                .findByEntrepotSourceIdOrEntrepotDestinationId(entrepotId, entrepotId, pageable)
+                .map(this::toMovementDTO);
+    }
+
+    public Page<StockMovementDTO> findMovementsByType(MovementType type, Pageable pageable) {
+        return stockMovementRepository.findByType(type, pageable).map(this::toMovementDTO);
+    }
+
+    public Page<StockMovementDTO> findMovementsByPeriode(LocalDate debut, LocalDate fin, Pageable pageable) {
+        LocalDateTime from = debut.atStartOfDay();
+        LocalDateTime to = fin.atTime(23, 59, 59);
+        return stockMovementRepository.findByPeriode(from, to, pageable).map(this::toMovementDTO);
     }
 
     private StockDTO toDTO(Stock s) {
