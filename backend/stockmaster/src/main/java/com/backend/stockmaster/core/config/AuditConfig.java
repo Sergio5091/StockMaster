@@ -1,16 +1,16 @@
-package com.backend.stockmaster.core.config;
+// package com.backend.stockmaster.core.config;
 
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
-import org.springframework.data.domain.AuditorAware;
+// import org.springframework.context.annotation.Bean;
+// import org.springframework.context.annotation.Configuration;
+// import org.springframework.data.domain.AuditorAware;
 
-import java.util.Optional;
+// import java.util.Optional;
 
-@Configuration
-public class AuditConfig {
+// @Configuration
+// public class AuditConfig {
 
-    @Bean
-    public AuditorAware<String> auditorProvider() {
-        return () -> Optional.of("system");
-    }
-}
+//     @Bean
+//     public AuditorAware<String> auditorProvider() {
+//         return () -> Optional.of("system");
+//     }
+// }

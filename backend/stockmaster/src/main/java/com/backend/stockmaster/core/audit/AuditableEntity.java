@@ -3,8 +3,10 @@ package com.backend.stockmaster.core.audit;
 import jakarta.persistence.Column;
 import jakarta.persistence.EntityListeners;
 import jakarta.persistence.MappedSuperclass;
+import jakarta.persistence.Version;
 import lombok.Getter;
 import lombok.Setter;
+import org.hibernate.envers.Audited;
 import org.springframework.data.annotation.CreatedBy;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedBy;
@@ -17,6 +19,7 @@ import java.time.LocalDateTime;
 @Setter
 @MappedSuperclass
 @EntityListeners(AuditingEntityListener.class)
+@Audited
 public class AuditableEntity {
 
     @CreatedDate
@@ -32,4 +35,8 @@ public class AuditableEntity {
 
     @LastModifiedBy
     private String updatedBy;
+
+    @Version
+    @Column(name = "version")
+    private Long version = 0L;
 }
