@@ -15,45 +15,27 @@ public class AlertScheduler {
 
     private final AlertService alertService;
 
-    /**
-     * Générer les alertes de stock toutes les heures
-     */
-    @Scheduled(fixedRate = 3600000) // 1 heure
+    /** Générer les alertes de stock toutes les heures */
+    @Scheduled(fixedRate = 3_600_000)
     public void generateStockAlerts() {
         try {
-            log.info("Starting scheduled stock alert generation...");
-            alertService.generateStockAlerts();
-            log.info("Stock alerts generated successfully");
+            log.info("Génération des alertes de stock...");
+            int count = alertService.generateStockAlerts();
+            log.info("{} nouvelle(s) alerte(s) générée(s)", count);
         } catch (Exception e) {
-            log.error("Error generating stock alerts", e);
+            log.error("Erreur lors de la génération des alertes", e);
         }
     }
 
-    /**
-     * Générer les alertes de stock toutes les 6 heures (alternative)
-     */
-    @Scheduled(cron = "0 0 */6 * * *") // Every 6 hours at 0 minutes
-    public void generateStockAlertsWithCron() {
-        try {
-            log.info("Starting scheduled (CRON) stock alert generation...");
-            alertService.generateStockAlerts();
-            log.info("Stock alerts (CRON) generated successfully");
-        } catch (Exception e) {
-            log.error("Error generating stock alerts (CRON)", e);
-        }
-    }
-
-    /**
-     * Nettoyer les alertes traitées de plus de 30 jours
-     */
-    @Scheduled(cron = "0 0 2 * * *") // Every day at 2 AM
+    /** Nettoyer les alertes traitées de plus de 30 jours — chaque jour à 2h */
+    @Scheduled(cron = "0 0 2 * * *")
     public void cleanupOldAlerts() {
         try {
-            log.info("Starting cleanup of old alerts...");
-            // Implémentation du nettoyage des alertes anciennes
-            log.info("Old alerts cleaned up successfully");
+            log.info("Nettoyage des alertes anciennes...");
+            alertService.cleanupOldAlerts();
+            log.info("Nettoyage terminé");
         } catch (Exception e) {
-            log.error("Error cleaning up old alerts", e);
+            log.error("Erreur lors du nettoyage des alertes", e);
         }
     }
 }

@@ -103,11 +103,11 @@ public class TransferService {
         Transfer transfer = findOrThrow(id);
         if (transfer.getStatut() == TransferStatus.RECU)
             throw new BusinessException("Un transfert reçu ne peut pas être annulé.");
-        // Si expédié, on recrédite la source
+        // Si expédié, on recrédite la source avec le bon type de mouvement
         if (transfer.getStatut() == TransferStatus.EXPEDIE) {
             transfer.getLignes().forEach(l ->
                 stockService.addStock(l.getProduitId(), transfer.getEntrepotSourceId(),
-                        l.getQuantiteDemandee(), MovementType.AJUSTEMENT_INVENTAIRE,
+                        l.getQuantiteDemandee(), MovementType.TRANSFERT_ENTRANT,
                         transfer.getNumero(), null, "Annulation transfert " + transfer.getNumero()));
         }
         transfer.setStatut(TransferStatus.ANNULE);

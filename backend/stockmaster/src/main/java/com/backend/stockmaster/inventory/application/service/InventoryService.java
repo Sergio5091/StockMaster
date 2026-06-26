@@ -11,6 +11,7 @@ import com.backend.stockmaster.stock.application.service.StockApplicationService
 import com.backend.stockmaster.stock.domain.MovementType;
 import com.backend.stockmaster.stock.repository.StockRepository;
 import com.backend.stockmaster.warehouse.repository.WarehouseRepository;
+import com.backend.stockmaster.location.repository.LocationRepository;
 import com.backend.stockmaster.zone.repository.ZoneRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -34,6 +35,7 @@ public class InventoryService {
     private final WarehouseRepository warehouseRepository;
     private final ZoneRepository zoneRepository;
     private final CategoryRepository categoryRepository;
+    private final LocationRepository locationRepository;
 
     public Page<InventoryDTO> findAll(Pageable pageable) {
         return inventoryRepository.findAll(pageable).map(this::toDTO);
@@ -64,17 +66,27 @@ public class InventoryService {
         Inventory inv = findOrThrow(id);
         if (inv.getStatut() != InventoryStatus.PLANIFIE)
             throw new BusinessException("Seul un inventaire planifié peut être démarré.");
-        // Charger les stocks théoriques de l'entrepôt
+
+        // Si zoneId défini : ne charger que les produits ayant des emplacements dans cette zone
+        java.util.Set<Long> produitsDansZone = null;
+        if (inv.getZoneId() != null) {
+            produitsDansZone = locationRepository.findByZoneIdAndActifTrue(inv.getZoneId()).stream()
+                    .filter(l -> l.getProduitId() != null)
+                    .map(com.backend.stockmaster.location.domain.Location::getProduitId)
+                    .collect(java.util.stream.Collectors.toSet());
+        }
+        final java.util.Set<Long> zoneFilter = produitsDansZone;
+
         stockRepository.findByEntrepotId(inv.getEntrepotId()).forEach(s -> {
-            if (inv.getCategorieId() != null) {
-                // filtrer par catégorie si inventaire partiel
-                productRepository.findById(s.getProduitId()).ifPresent(p -> {
-                    if (inv.getCategorieId().equals(p.getCategorieId())) addLine(inv, s.getProduitId(), s.getQuantiteDisponible());
-                });
-            } else {
+            productRepository.findById(s.getProduitId()).ifPresent(p -> {
+                // Filtre par catégorie
+                if (inv.getCategorieId() != null && !inv.getCategorieId().equals(p.getCategorieId())) return;
+                // Filtre par zone
+                if (zoneFilter != null && !zoneFilter.contains(p.getId())) return;
                 addLine(inv, s.getProduitId(), s.getQuantiteDisponible());
-            }
+            });
         });
+
         inv.setStatut(InventoryStatus.EN_COURS);
         inv.setDateDebut(LocalDate.now());
         return toDTO(inventoryRepository.save(inv));
@@ -94,7 +106,8 @@ public class InventoryService {
                     return nl;
                 });
         line.setQuantiteComptee(dto.getQuantiteComptee());
-        line.setEcart(dto.getQuantiteComptee() - line.getQuantiteTheorique());
+        int theorique = line.getQuantiteTheorique() != null ? line.getQuantiteTheorique() : 0;
+        line.setEcart(dto.getQuantiteComptee() - theorique);
         line.setNote(dto.getNote());
         return toDTO(inventoryRepository.save(inv));
     }

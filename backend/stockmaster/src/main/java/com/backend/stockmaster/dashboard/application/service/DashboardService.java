@@ -11,6 +11,7 @@ import com.backend.stockmaster.transfer.repository.TransferRepository;
 import com.backend.stockmaster.inventory.repository.InventoryRepository;
 import com.backend.stockmaster.alert.repository.AlertRepository;
 import com.backend.stockmaster.category.repository.CategoryRepository;
+import com.backend.stockmaster.zone.repository.ZoneRepository;
 import com.backend.stockmaster.alert.domain.AlertType;
 import com.backend.stockmaster.inventory.domain.InventoryStatus;
 import com.backend.stockmaster.transfer.domain.TransferStatus;
@@ -46,6 +47,7 @@ public class DashboardService {
     private final InventoryRepository inventoryRepository;
     private final AlertRepository alertRepository;
     private final CategoryRepository categoryRepository;
+    private final ZoneRepository zoneRepository;
 
     public DashboardKPIDTO getDashboardKPIs() {
         return DashboardKPIDTO.builder()
@@ -171,18 +173,18 @@ public class DashboardService {
             LocalDateTime endOfMonth = month.atEndOfMonth().atTime(23, 59, 59);
 
             long incoming = stockMovementRepository.findAll().stream()
-                    .filter(m -> m.getCreatedAt() != null 
+                    .filter(m -> m.getCreatedAt() != null
                             && m.getCreatedAt().isAfter(startOfMonth)
                             && m.getCreatedAt().isBefore(endOfMonth)
-                            && "ENTREE".equals(m.getType()))
+                            && com.backend.stockmaster.stock.domain.MovementType.ENTREE == m.getType())
                     .mapToLong(m -> m.getQuantite() != null ? m.getQuantite() : 0)
                     .sum();
 
             long outgoing = stockMovementRepository.findAll().stream()
-                    .filter(m -> m.getCreatedAt() != null 
+                    .filter(m -> m.getCreatedAt() != null
                             && m.getCreatedAt().isAfter(startOfMonth)
                             && m.getCreatedAt().isBefore(endOfMonth)
-                            && "SORTIE".equals(m.getType()))
+                            && com.backend.stockmaster.stock.domain.MovementType.SORTIE == m.getType())
                     .mapToLong(m -> m.getQuantite() != null ? m.getQuantite() : 0)
                     .sum();
 
@@ -200,16 +202,26 @@ public class DashboardService {
         return warehouseRepository.findAll().stream()
                 .filter(w -> w.isActif())
                 .map(w -> {
-                    BigDecimal total = w.getCapaciteTotale() != null ? BigDecimal.valueOf(w.getCapaciteTotale()) : BigDecimal.ONE;
-                    BigDecimal utilized = BigDecimal.ZERO;
-                    double percent = total.doubleValue() > 0 ? (utilized.doubleValue() / total.doubleValue()) * 100 : 0;
-                    
+                    BigDecimal total = w.getCapaciteTotale() != null
+                            ? BigDecimal.valueOf(w.getCapaciteTotale())
+                            : BigDecimal.ONE;
+
+                    // Calculer la capacité utilisée = somme des occupations des zones
+                    double occupationZones = zoneRepository.findByEntrepotIdAndActifTrue(w.getId()).stream()
+                            .mapToDouble(z -> z.getOccupationM3() != null ? z.getOccupationM3() : 0.0)
+                            .sum();
+                    BigDecimal utilized = BigDecimal.valueOf(occupationZones);
+
+                    double percent = total.doubleValue() > 0
+                            ? (utilized.doubleValue() / total.doubleValue()) * 100
+                            : 0;
+
                     return WarehouseCapacityDTO.builder()
                             .warehouseId(w.getId())
                             .warehouseName(w.getNom())
                             .usedCapacity(utilized)
                             .totalCapacity(total)
-                            .utilizationPercent(Math.round(percent * 100.0) / 100.0)
+                            .utilizationPercent(Math.min(100.0, Math.round(percent * 100.0) / 100.0))
                             .build();
                 })
                 .collect(Collectors.toList());
