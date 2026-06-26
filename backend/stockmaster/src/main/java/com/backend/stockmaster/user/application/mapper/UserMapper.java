@@ -13,8 +13,16 @@ public interface UserMapper {
 
     UserResponse toResponse(User user);
 
+    @Mapping(target = "id", ignore = true)
+    @Mapping(target = "active", ignore = true)
+    @Mapping(target = "password", ignore = true)
     User toEntity(RegisterRequest request);
 
     @Mapping(target = "password", ignore = true)
+    @Mapping(target = "id", ignore = true)
+    @Mapping(target = "createdAt", ignore = true)
+    @Mapping(target = "updatedAt", ignore = true)
+    @Mapping(target = "createdBy", ignore = true)
+    @Mapping(target = "updatedBy", ignore = true)
     void updateFromDto(UserUpdateRequest request, @MappingTarget User user);
 }

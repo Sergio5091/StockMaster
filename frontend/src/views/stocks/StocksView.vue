@@ -72,6 +72,7 @@
             <th class="text-right px-4 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wide hidden lg:table-cell">Réservé</th>
             <th class="text-right px-4 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wide hidden lg:table-cell">En transit</th>
             <th class="text-left px-4 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Niveau</th>
+            <th class="px-4 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wide text-center">Action</th>
           </tr>
         </thead>
         <tbody>
@@ -99,6 +100,14 @@
             <td class="px-4 py-3.5">
               <StockIndicator :qty="s.quantiteDisponible" :min="s.stockMinimum ?? 0" :max="s.stockMaximum ?? 9999" :show-status="true" />
             </td>
+            <td class="px-4 py-3.5 text-center">
+              <button @click="openAdjust(s)"
+                class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border text-xs font-medium hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
+                title="Ajustement manuel">
+                <SlidersHorizontal :size="13" />
+                Ajuster
+              </button>
+            </td>
           </tr>
         </tbody>
       </table>
@@ -107,30 +116,28 @@
         <BarChart3 :size="36" class="mx-auto mb-3 opacity-30" /><p>Aucun stock trouvé</p>
       </div>
 
-      <div v-if="totalPages > 1" class="flex items-center justify-between px-4 py-3 border-t border-border bg-muted/20">
-        <span class="text-xs text-muted-foreground">{{ filtered.length }} ligne(s) · Page {{ page + 1 }} / {{ totalPages }}</span>
+      <div v-if="totalPagesLocal > 1" class="flex items-center justify-between px-4 py-3 border-t border-border bg-muted/20">
+        <span class="text-xs text-muted-foreground">{{ filtered.length }} ligne(s) · Page {{ page + 1 }} / {{ totalPagesLocal }}</span>
         <div class="flex items-center gap-1">
           <button @click="page--" :disabled="page === 0" class="p-1.5 rounded-lg hover:bg-muted disabled:opacity-40 transition-colors"><ChevronLeft :size="16" /></button>
-          <button @click="page++" :disabled="page >= totalPages - 1" class="p-1.5 rounded-lg hover:bg-muted disabled:opacity-40 transition-colors"><ChevronRight :size="16" /></button>
+          <button @click="page++" :disabled="page >= totalPagesLocal - 1" class="p-1.5 rounded-lg hover:bg-muted disabled:opacity-40 transition-colors"><ChevronRight :size="16" /></button>
         </div>
       </div>
     </div>
+
+    <!-- Modal ajustement -->
+    <StockAdjustModal v-if="adjustStock" :stock="adjustStock" @close="adjustStock = null" @adjusted="onAdjusted" />
   </div>
 </template>
+
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { RouterLink } from 'vue-router'
-import { Search, ArrowLeftRight, Package, ChevronLeft, ChevronRight, BarChart3 } from 'lucide-vue-next'
+import { Search, ArrowLeftRight, Package, ChevronLeft, ChevronRight, BarChart3, SlidersHorizontal } from 'lucide-vue-next'
 import PageHeader from '@/components/common/PageHeader.vue'
 import StockIndicator from '@/components/common/StockIndicator.vue'
-import api from '@/services/api'
-
-interface StockItem {
-  id: number; produitId: number; produitRef: string; produitNom: string
-  entrepotId: number; entrepotCode: string; entrepotNom: string
-  quantiteDisponible: number; quantiteReservee: number; quantiteEnTransit: number
-  stockMinimum?: number; stockMaximum?: number; statut: string
-}
+import StockAdjustModal from '@/components/stocks/StockAdjustModal.vue'
+import { stockService, type StockItem } from '@/services/stock.service'
 
 const stocks = ref<StockItem[]>([])
 const loading = ref(false)
@@ -139,9 +146,8 @@ const search = ref('')
 const filterEntrepotNom = ref('')
 const filterStatut = ref('')
 const page = ref(0)
-const totalElements = ref(0)
-const totalPages = ref(0)
 const pageSize = 12
+const adjustStock = ref<StockItem | null>(null)
 let searchTimer: ReturnType<typeof setTimeout>
 
 const entrepots = computed(() => [...new Set(stocks.value.map(s => s.entrepotNom).filter(Boolean))])
@@ -164,12 +170,11 @@ const kpis = computed(() => ({
 }))
 
 async function load() {
-  loading.value = true; error.value = ''
+  loading.value = true
+  error.value = ''
   try {
-    const { data } = await api.get('/stocks', { params: { page: 0, size: 500 } })
-    stocks.value = data.content || []
-    totalElements.value = data.totalElements
-    totalPages.value = totalPagesLocal.value
+    const data = await stockService.findAll(0, 500)
+    stocks.value = data.content
   } catch (e: any) {
     error.value = e?.response?.data?.message || 'Erreur lors du chargement des stocks'
   } finally {
@@ -183,7 +188,15 @@ function onSearch() {
 }
 
 function stockColor(statut: string) {
-  return ({ critical: 'text-red-600', low: 'text-amber-600', normal: 'text-emerald-600', excess: 'text-blue-600' } as any)[statut] || 'text-foreground'
+  return ({ critical: 'text-red-600', low: 'text-amber-600', normal: 'text-emerald-600', excess: 'text-blue-600' } as Record<string, string>)[statut] || 'text-foreground'
+}
+
+function openAdjust(stock: StockItem) {
+  adjustStock.value = stock
+}
+
+function onAdjusted() {
+  load() // Recharger les stocks après ajustement
 }
 
 onMounted(load)
