@@ -64,10 +64,10 @@ const router = useRouter()
 const auth = useAuthStore()
 const email = ref(''); const password = ref(''); const showPassword = ref(false); const loading = ref(false); const error = ref('')
 const demoAccounts = [
-  { role: 'Administrateur', email: 'admin@stockmaster.com', password: 'Admin1234' },
-  { role: 'Gestionnaire', email: 'manager@stockmaster.com', password: 'Manager1234' },
-  { role: 'Magasinier', email: 'operator@stockmaster.com', password: 'Operator1234' },
-  { role: 'Auditeur', email: 'auditor@stockmaster.com', password: 'Auditor1234' },
+  { role: 'Administrateur', email: 'admin@stockmaster.com', password: 'Admin1234!' },
+  { role: 'Gestionnaire', email: 'manager@stockmaster.com', password: 'Manager1234!' },
+  { role: 'Magasinier', email: 'operator@stockmaster.com', password: 'Operator1234!' },
+  { role: 'Auditeur', email: 'auditor@stockmaster.com', password: 'Auditor1234!' },
 ]
 function fillDemo(demo: { email: string; password: string }) { email.value = demo.email; password.value = demo.password; error.value = '' }
 async function handleLogin() {

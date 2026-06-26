@@ -78,25 +78,48 @@ export const useAuthStore = defineStore('auth', () => {
       const mins = Math.ceil((blockedUntil.value.getTime() - Date.now()) / 60000)
       return { success: false, error: `Compte bloqué. Réessayez dans ${mins} minute(s).` }
     }
-    await new Promise(r => setTimeout(r, 600))
-    const entry = DEMO_USERS[email.toLowerCase()]
-    if (!entry || entry.password !== password) {
+
+    // Dériver le username depuis l'email (ex: admin@stockmaster.com → admin)
+    const username = email.includes('@') ? email.split('@')[0] : email
+
+    try {
+      const { data } = await import('./api').then(m => m.default.post('/auth/login', { username, password }))
+      loginAttempts.value = 0
+      blockedUntil.value = null
+
+      token.value = data.token
+      localStorage.setItem('sm_token', data.token)
+      if (data.refreshToken) localStorage.setItem('sm_refreshToken', data.refreshToken)
+
+      // Construire l'objet user depuis la réponse backend
+      const backendUser = data.user
+      const roleMap: Record<string, User['role']> = {
+        ADMINISTRATEUR: 'ROLE_ADMIN',
+        GESTIONNAIRE: 'ROLE_MANAGER',
+        MAGASINIER: 'ROLE_OPERATOR',
+        AUDITEUR: 'ROLE_AUDITOR',
+      }
+      user.value = {
+        id: backendUser.id,
+        nom: backendUser.fullName?.split(' ').slice(1).join(' ') || '',
+        prenom: backendUser.fullName?.split(' ')[0] || '',
+        email: backendUser.email,
+        role: roleMap[backendUser.role] ?? 'ROLE_OPERATOR',
+        actif: true,
+        entrepots: [],
+      }
+      localStorage.setItem('sm_user', JSON.stringify(user.value))
+      return { success: true }
+    } catch (err: any) {
       loginAttempts.value++
       if (loginAttempts.value >= 5) {
         blockedUntil.value = new Date(Date.now() + 15 * 60 * 1000)
         loginAttempts.value = 0
         return { success: false, error: 'Trop de tentatives. Compte bloqué 15 minutes.' }
       }
-      return { success: false, error: `Identifiants invalides. Tentative ${loginAttempts.value}/5.` }
+      const msg = err?.response?.data?.message || err?.response?.data || 'Identifiants invalides'
+      return { success: false, error: `${msg}. Tentative ${loginAttempts.value}/5.` }
     }
-    loginAttempts.value = 0
-    blockedUntil.value = null
-    const mockToken = `mock.jwt.${btoa(email)}.${Date.now()}`
-    token.value = mockToken
-    user.value = entry.user
-    localStorage.setItem('sm_token', mockToken)
-    localStorage.setItem('sm_user', JSON.stringify(entry.user))
-    return { success: true }
   }
 
   function logout() {
@@ -104,6 +127,7 @@ export const useAuthStore = defineStore('auth', () => {
     user.value = null
     localStorage.removeItem('sm_token')
     localStorage.removeItem('sm_user')
+    localStorage.removeItem('sm_refreshToken')
   }
 
   function updateProfile(updates: Partial<User>) {
