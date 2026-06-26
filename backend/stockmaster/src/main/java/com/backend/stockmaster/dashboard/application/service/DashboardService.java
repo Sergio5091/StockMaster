@@ -129,7 +129,7 @@ public class DashboardService {
         LocalDateTime firstDay = LocalDate.now().withDayOfMonth(1).atStartOfDay();
         return stockMovementRepository.findAll().stream()
                 .filter(m -> m.getCreatedAt() != null && m.getCreatedAt().isAfter(firstDay)
-                        && "ENTREE".equals(m.getType()))
+                        && com.backend.stockmaster.stock.domain.MovementType.ENTREE == m.getType())
                 .count();
     }
 
@@ -137,7 +137,7 @@ public class DashboardService {
         LocalDateTime firstDay = LocalDate.now().withDayOfMonth(1).atStartOfDay();
         return stockMovementRepository.findAll().stream()
                 .filter(m -> m.getCreatedAt() != null && m.getCreatedAt().isAfter(firstDay)
-                        && "SORTIE".equals(m.getType()))
+                        && com.backend.stockmaster.stock.domain.MovementType.SORTIE == m.getType())
                 .count();
     }
 

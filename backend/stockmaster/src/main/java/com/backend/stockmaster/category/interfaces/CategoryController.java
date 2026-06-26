@@ -36,9 +36,9 @@ public class CategoryController {
     }
 
     @GetMapping("/roots")
-    @Operation(summary = "Lister les catégories racines")
+    @Operation(summary = "Lister les catégories racines (sans parent)")
     public ResponseEntity<List<CategoryDTO>> findRoots() {
-        return ResponseEntity.ok(categoryService.findActiveCategories());
+        return ResponseEntity.ok(categoryService.findRootCategories());
     }
 
     @GetMapping("/{id}")
