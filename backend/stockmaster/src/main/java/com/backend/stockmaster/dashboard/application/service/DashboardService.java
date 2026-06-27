@@ -78,7 +78,7 @@ public class DashboardService {
 
     private Long calculateActiveWarehouses() {
         return warehouseRepository.findAll().stream()
-                .filter(Warehouse -> Warehouse.isActif())
+                .filter(w -> w.isActif())
                 .count();
     }
 

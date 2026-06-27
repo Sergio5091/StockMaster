@@ -45,7 +45,7 @@
 </template>
 <script setup lang="ts">
 import { formatDate, formatCurrency } from '@/utils/formatters'
-import { issueService, type Issue } from '@/services/operations.service'
+import { issueService } from '@/services/operations.service'
 import { ref, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { CheckCircle2, XCircle } from 'lucide-vue-next'
@@ -54,8 +54,19 @@ import StatusBadge from '@/components/common/StatusBadge.vue'
 import { usePermissions } from '@/composables/usePermissions'
 const { can } = usePermissions()
 const route = useRoute()
-const issue = ref<Issue | null>(null)
+const issue = ref<any>({ numero: '', entrepotNom: '', motif: '', statut: '', dateSortie: '', creePar: '', lignes: [] })
+const loading = ref(true)
 onMounted(async () => {
-  issue.value = await issueService.findById(Number(route.params.id))
+  try {
+    issue.value = await issueService.findById(Number(route.params.id))
+  } finally {
+    loading.value = false
+  }
 })
+async function validate() {
+  try { issue.value = await issueService.validate(Number(route.params.id)) } catch {}
+}
+async function cancel() {
+  try { issue.value = await issueService.cancel(Number(route.params.id)) } catch {}
+}
 </script>

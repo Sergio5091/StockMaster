@@ -61,8 +61,8 @@
 </template>
 <script setup lang="ts">
 import { formatDate } from '@/utils/formatters'
-import { receiptService, type Receipt } from '@/services/operations.service'
-import { ref, onMounted } from 'vue'
+import { receiptService } from '@/services/operations.service'
+import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { CheckCircle2, XCircle, Check, X } from 'lucide-vue-next'
 import PageHeader from '@/components/common/PageHeader.vue'
@@ -70,11 +70,27 @@ import StatusBadge from '@/components/common/StatusBadge.vue'
 import { usePermissions } from '@/composables/usePermissions'
 const { can } = usePermissions()
 const route = useRoute()
-const receipt = ref<Receipt | null>(null)
+const receipt = ref<any>({ numero: '', fournisseurNom: '', entrepotNom: '', statut: '', dateReception: '', creePar: '', lignes: [] })
+const loading = ref(true)
+const error = ref('')
 onMounted(async () => {
-  receipt.value = await receiptService.findById(Number(route.params.id))
+  try {
+    receipt.value = await receiptService.findById(Number(route.params.id))
+  } catch (e: any) {
+    error.value = e?.response?.data?.message || 'Erreur de chargement'
+  } finally {
+    loading.value = false
+  }
 })
-const timeline = computed(() => receipt.value ? [{ label: 'Brouillon créé', done: true }, { label: 'Soumis pour validation', done: receipt.value.statut !== 'BROUILLON' }, { label: 'Validé', done: receipt.value.statut === 'VALIDE' }] : [])
-function validate() { receipt.value.statut = 'VALIDE' }
-function reject() { receipt.value.statut = 'REJETE' }
+const timeline = computed(() => [
+  { label: 'Brouillon créé', done: true },
+  { label: 'Soumis pour validation', done: receipt.value.statut !== 'BROUILLON' },
+  { label: 'Validé', done: receipt.value.statut === 'VALIDE' },
+])
+async function validate() {
+  try { receipt.value = await receiptService.validate(Number(route.params.id)) } catch {}
+}
+async function reject() {
+  try { receipt.value = await receiptService.reject(Number(route.params.id)) } catch {}
+}
 </script>

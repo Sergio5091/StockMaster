@@ -83,7 +83,7 @@ export const useAuthStore = defineStore('auth', () => {
     const username = email.includes('@') ? email.split('@')[0] : email
 
     try {
-      const { data } = await import('./api').then(m => m.default.post('/auth/login', { username, password }))
+      const { data } = await import('../services/api').then(m => m.default.post('/auth/login', { username, password }))
       loginAttempts.value = 0
       blockedUntil.value = null
 

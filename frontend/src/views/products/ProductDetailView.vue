@@ -103,18 +103,36 @@
   </div>
 </template>
 <script setup lang="ts">
-import { computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
 import { Package, Edit3, BarChart3, Warehouse, AlertTriangle, ArrowLeftRight } from 'lucide-vue-next'
 import PageHeader from '@/components/common/PageHeader.vue'
 import StatusBadge from '@/components/common/StatusBadge.vue'
 import StockIndicator from '@/components/common/StockIndicator.vue'
-import { PRODUCTS, formatCurrency, formatDate } from '@/services/mockData'
+import { formatCurrency, formatDate } from '@/services/mockData'
 import { usePermissions } from '@/composables/usePermissions'
+import ProductService from '@/services/product.service'
+import { stockService, stockMovementService } from '@/services/stock.service'
+
 const { can } = usePermissions()
 const route = useRoute()
 const id = Number(route.params.id)
-const product = PRODUCTS.find(p => p.id === id) || PRODUCTS[0]
-const productStocks = STOCKS.filter(s => s.produitId === product.id)
-const recentMvts = STOCK_MOVEMENTS.filter(m => m.produitRef === product.reference).slice(0, 5)
+
+const product = ref<any>({ nom: '', reference: '', actif: true, stockMinimum: 0, stockMaximum: 0 })
+const productStocks = ref<any[]>([])
+const recentMvts = ref<any[]>([])
+
+onMounted(async () => {
+  try {
+    product.value = await ProductService.getById(id)
+  } catch { product.value = {} }
+  try {
+    const allStocks = await stockService.findAll(0, 500)
+    productStocks.value = (allStocks.content || []).filter((s: any) => s.produitId === id)
+  } catch { productStocks.value = [] }
+  try {
+    const mvts = await stockMovementService.findByProduit(id, 0, 5)
+    recentMvts.value = (mvts.content || []).slice(0, 5)
+  } catch { recentMvts.value = [] }
+})
 </script>

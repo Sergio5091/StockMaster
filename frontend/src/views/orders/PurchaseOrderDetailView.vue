@@ -3,8 +3,8 @@
     <PageHeader :title="order.numero" :subtitle="`Commande · ${order.fournisseurNom}`" back="Commandes fournisseurs">
       <template #actions>
         <StatusBadge :status="order.statut" :dot="true" />
-        <button v-if="can('manage_orders') && order.statut === 'BROUILLON'" @click="order.statut = 'VALIDEE'" class="btn-primary flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold text-white"><CheckCircle2 :size="15" /> Valider</button>
-        <button v-if="can('manage_orders') && order.statut === 'VALIDEE'" @click="order.statut = 'ENVOYEE'" class="btn-primary flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold text-white"><Send :size="15" /> Envoyer</button>
+        <button v-if="can('manage_orders') && order.statut === 'BROUILLON'" @click="validate" class="btn-primary flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold text-white"><CheckCircle2 :size="15" /> Valider</button>
+        <button v-if="can('manage_orders') && order.statut === 'VALIDEE'" @click="send" class="btn-primary flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold text-white"><Send :size="15" /> Envoyer</button>
       </template>
     </PageHeader>
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -48,7 +48,7 @@
 </template>
 <script setup lang="ts">
 import { formatDate, formatCurrency } from '@/utils/formatters'
-import { purchaseOrderService, type PurchaseOrder } from '@/services/operations.service'
+import { purchaseOrderService } from '@/services/operations.service'
 import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { CheckCircle2, Send } from 'lucide-vue-next'
@@ -57,8 +57,24 @@ import StatusBadge from '@/components/common/StatusBadge.vue'
 import { usePermissions } from '@/composables/usePermissions'
 const { can } = usePermissions()
 const route = useRoute()
-const order = ref<PurchaseOrder | null>(null)
+const order = ref<any>({ numero: '', fournisseurNom: '', entrepotNom: '', statut: '', dateCommande: '', creePar: '', montantTotal: 0, lignes: [] })
+const loading = ref(true)
 onMounted(async () => {
-  order.value = await purchaseOrderService.findById(Number(route.params.id))
+  try {
+    order.value = await purchaseOrderService.findById(Number(route.params.id))
+  } finally {
+    loading.value = false
+  }
 })
+const isLate = computed(() =>
+  order.value.dateLivraisonPrevue && ['BROUILLON','VALIDEE','ENVOYEE'].includes(order.value.statut)
+    ? new Date(order.value.dateLivraisonPrevue) < new Date()
+    : false
+)
+async function validate() {
+  try { order.value = await purchaseOrderService.validate(Number(route.params.id)) } catch {}
+}
+async function send() {
+  try { order.value = await purchaseOrderService.send(Number(route.params.id)) } catch {}
+}
 </script>
