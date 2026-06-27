@@ -39,6 +39,7 @@ public class DashboardKPIDTO {
     
     // Charts data
     private List<StockMovementChartDTO> stockMovementChart;
+    private List<ProductRotationChartDTO> productRotationChart;
     private List<WarehouseCapacityDTO> warehouseCapacity;
     private List<ProductCategoryChartDTO> productByCategory;
     private List<MonthlyRevenueDTO> monthlyRevenue;

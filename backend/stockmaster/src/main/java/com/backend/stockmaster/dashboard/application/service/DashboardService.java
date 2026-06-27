@@ -20,6 +20,8 @@ import com.backend.stockmaster.receipt.domain.GoodsReceipt;
 import com.backend.stockmaster.issue.domain.GoodsIssue;
 import com.backend.stockmaster.transfer.domain.Transfer;
 import com.backend.stockmaster.inventory.domain.Inventory;
+import com.backend.stockmaster.stock.domain.MovementType;
+import com.backend.stockmaster.stock.domain.StockMovement;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -63,6 +65,7 @@ public class DashboardService {
                 .pendingReceipts(calculatePendingReceipts())
                 .activeAlerts(calculateActiveAlerts())
                 .stockMovementChart(getStockMovementChart())
+                .productRotationChart(getProductRotationChart())
                 .warehouseCapacity(getWarehouseCapacity())
                 .productByCategory(getProductByCategory())
                 .monthlyRevenue(getMonthlyRevenue())
@@ -85,20 +88,25 @@ public class DashboardService {
     }
 
     private Long calculateProductsInStock() {
-        return stockRepository.findAll().stream()
-                .filter(s -> s.getQuantiteDisponible() > 0)
-                .count();
+        Map<Long, Long> availableByProduct = stockRepository.findAll().stream()
+                .collect(Collectors.groupingBy(
+                        s -> s.getProduitId(),
+                        Collectors.summingLong(s -> s.getQuantiteDisponible() != null ? s.getQuantiteDisponible() : 0L)
+                ));
+        return availableByProduct.values().stream().filter(qty -> qty > 0).count();
     }
 
     private Long calculateCriticalStockProducts() {
+        Map<Long, Long> availableByProduct = stockRepository.findAll().stream()
+                .collect(Collectors.groupingBy(
+                        s -> s.getProduitId(),
+                        Collectors.summingLong(s -> s.getQuantiteDisponible() != null ? s.getQuantiteDisponible() : 0L)
+                ));
         return productRepository.findAll().stream()
                 .filter(p -> {
-                    var stock = stockRepository.findAll().stream()
-                            .filter(s -> s.getProduitId().equals(p.getId()))
-                            .findFirst();
-                    return stock.isPresent() && 
-                           p.getStockMinimum() != null &&
-                           stock.get().getQuantiteDisponible() <= p.getStockMinimum();
+                    long available = availableByProduct.getOrDefault(p.getId(), 0L);
+                    long minimum = p.getStockMinimum() != null ? p.getStockMinimum() : 0L;
+                    return available <= minimum;
                 })
                 .count();
     }
@@ -137,7 +145,7 @@ public class DashboardService {
         LocalDateTime firstDay = LocalDate.now().withDayOfMonth(1).atStartOfDay();
         return stockMovementRepository.findAll().stream()
                 .filter(m -> m.getCreatedAt() != null && m.getCreatedAt().isAfter(firstDay)
-                        && "SORTIE".equals(m.getType()))
+                        && MovementType.SORTIE.equals(m.getType()))
                 .count();
     }
 
@@ -172,17 +180,17 @@ public class DashboardService {
 
             long incoming = stockMovementRepository.findAll().stream()
                     .filter(m -> m.getCreatedAt() != null 
-                            && m.getCreatedAt().isAfter(startOfMonth)
-                            && m.getCreatedAt().isBefore(endOfMonth)
-                            && "ENTREE".equals(m.getType()))
+                            && !m.getCreatedAt().isBefore(startOfMonth)
+                            && !m.getCreatedAt().isAfter(endOfMonth)
+                            && MovementType.ENTREE.equals(m.getType()))
                     .mapToLong(m -> m.getQuantite() != null ? m.getQuantite() : 0)
                     .sum();
 
             long outgoing = stockMovementRepository.findAll().stream()
                     .filter(m -> m.getCreatedAt() != null 
-                            && m.getCreatedAt().isAfter(startOfMonth)
-                            && m.getCreatedAt().isBefore(endOfMonth)
-                            && "SORTIE".equals(m.getType()))
+                            && !m.getCreatedAt().isBefore(startOfMonth)
+                            && !m.getCreatedAt().isAfter(endOfMonth)
+                            && MovementType.SORTIE.equals(m.getType()))
                     .mapToLong(m -> m.getQuantite() != null ? m.getQuantite() : 0)
                     .sum();
 
@@ -191,6 +199,48 @@ public class DashboardService {
                     .incoming(incoming)
                     .outgoing(outgoing)
                     .netChange(incoming - outgoing)
+                    .build());
+        }
+        return result;
+    }
+
+    private List<ProductRotationChartDTO> getProductRotationChart() {
+        List<ProductRotationChartDTO> result = new ArrayList<>();
+        for (int i = 11; i >= 0; i--) {
+            YearMonth month = YearMonth.now().minusMonths(i);
+            LocalDateTime startOfMonth = month.atDay(1).atStartOfDay();
+            LocalDateTime endOfMonth = month.atEndOfMonth().atTime(23, 59, 59);
+
+            long entries = stockMovementRepository.findAll().stream()
+                    .filter(m -> m.getCreatedAt() != null
+                            && !m.getCreatedAt().isBefore(startOfMonth)
+                            && !m.getCreatedAt().isAfter(endOfMonth)
+                            && MovementType.ENTREE.equals(m.getType()))
+                    .mapToLong(m -> m.getQuantite() != null ? m.getQuantite() : 0)
+                    .sum();
+
+            long exits = stockMovementRepository.findAll().stream()
+                    .filter(m -> m.getCreatedAt() != null
+                            && !m.getCreatedAt().isBefore(startOfMonth)
+                            && !m.getCreatedAt().isAfter(endOfMonth)
+                            && MovementType.SORTIE.equals(m.getType()))
+                    .mapToLong(m -> m.getQuantite() != null ? m.getQuantite() : 0)
+                    .sum();
+
+            long productsMoved = stockMovementRepository.findAll().stream()
+                    .filter(m -> m.getCreatedAt() != null
+                            && !m.getCreatedAt().isBefore(startOfMonth)
+                            && !m.getCreatedAt().isAfter(endOfMonth)
+                            && (MovementType.ENTREE.equals(m.getType()) || MovementType.SORTIE.equals(m.getType())))
+                    .map(StockMovement::getProduitId)
+                    .distinct()
+                    .count();
+
+            result.add(ProductRotationChartDTO.builder()
+                    .month(month.toString())
+                    .entries(entries)
+                    .exits(exits)
+                    .productsMoved(productsMoved)
                     .build());
         }
         return result;

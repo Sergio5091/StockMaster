@@ -17,6 +17,7 @@
       </button>
       <nav class="flex-1 overflow-y-auto py-4 px-2 space-y-0.5">
         <NavItem :open="sidebarOpen" :to="{ name: 'dashboard' }" icon="LayoutDashboard" label="Tableau de bord" />
+        <NavItem :open="sidebarOpen" :to="{ name: 'kpi' }" icon="BarChart3" label="KPI" />
         <NavSection v-if="sidebarOpen" label="Structure" />
         <NavItem :open="sidebarOpen" :to="{ name: 'warehouses' }" icon="Warehouse" label="Entrepôts" />
         <NavSection v-if="sidebarOpen" label="Catalogue" />
@@ -124,7 +125,7 @@ const userMenuOpen = ref(false)
 const userMenuRef = ref<HTMLElement | null>(null)
 const unreadAlerts = computed(() => notifications.unreadCount)
 const PAGE_TITLES: Record<string, string> = {
-  dashboard: 'Tableau de bord', warehouses: 'Entrepôts', 'warehouse-detail': 'Détail entrepôt',
+  dashboard: 'Tableau de bord', kpi: 'KPI', warehouses: 'Entrepôts', 'warehouse-detail': 'Détail entrepôt',
   zones: 'Zones', locations: 'Emplacements', categories: 'Catégories', products: 'Produits',
   'product-detail': 'Fiche produit', suppliers: 'Fournisseurs', 'supplier-detail': 'Fiche fournisseur',
   stocks: 'Niveaux de stock', 'stock-movements': 'Historique mouvements', receipts: 'Bons de réception',

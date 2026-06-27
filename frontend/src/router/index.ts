@@ -17,6 +17,7 @@ const router = createRouter({
       children: [
         { path: '', redirect: '/dashboard' },
         { path: 'dashboard', name: 'dashboard', component: () => import('@/views/dashboard/DashboardView.vue') },
+        { path: 'kpi', name: 'kpi', component: () => import('@/views/dashboard/DashboardView.vue') },
         { path: 'users', name: 'users', component: () => import('@/views/users/UsersView.vue'), meta: { roles: ['ROLE_ADMIN'] } },
         { path: 'warehouses', name: 'warehouses', component: () => import('@/views/warehouses/WarehousesView.vue') },
         { path: 'warehouses/:id', name: 'warehouse-detail', component: () => import('@/views/warehouses/WarehouseDetailView.vue') },

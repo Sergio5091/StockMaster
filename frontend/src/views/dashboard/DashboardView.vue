@@ -112,6 +112,7 @@ import { Warehouse, Package, MoveRight, ShoppingCart, PackagePlus, PackageMinus,
 import { useAuthStore } from '@/stores/auth'
 import WarehouseService from '@/services/warehouse.service'
 import { purchaseOrderService, transferService, receiptService, issueService, inventoryService } from '@/services/operations.service'
+import dashboardService from '@/services/dashboard.service'
 import api from '@/services/api'
 
 const auth = useAuthStore()
@@ -121,6 +122,7 @@ const today = new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'nu
 const stats = ref({ totalEntrepots: 0, tauxOccupationMoyen: 0, totalProduits: 0, produitsCritiques: 0, transfertsEnCours: 0, commandesEnAttente: 0, entreesMonth: 0, sortiesMonth: 0, receptionsMonth: 0, inventairesActifs: 0 })
 const activeWarehouses = ref<any[]>([])
 const stockEvolution = ref<{ date: string; entrees: number; sorties: number }[]>([])
+const productRotation = ref<{ month: string; productsMoved: number; entries: number; exits: number }[]>([])
 
 function occ(wh: any) {
   if (!wh.capaciteTotale) return 0
@@ -203,6 +205,34 @@ async function loadDashboard() {
       stockEvolution.value = Object.entries(days).map(([date, v]) => ({ date, ...v }))
 
       stats.value.totalProduits = new Set(mvts.map((mv: any) => mv.produitId)).size
+      productRotation.value = Array.from(
+        new Map(
+          mvts
+            .filter((mv: any) => mv.type === 'ENTREE' || mv.type === 'SORTIE')
+            .reduce((acc: any[], mv: any) => {
+              const month = new Date(mv.createdAt).toLocaleDateString('fr-FR', { month: '2-digit', year: 'numeric' })
+              acc.push({ month, ...mv })
+              return acc
+            }, [])
+            .reduce((map: Map<string, any>, mv: any) => {
+              const key = mv.month
+              if (!map.has(key)) {
+                map.set(key, { month: key, productsMoved: new Set<number>(), entries: 0, exits: 0 })
+              }
+              const item = map.get(key)
+              item.productsMoved.add(mv.produitId)
+              if (mv.type === 'ENTREE') item.entries += 1
+              if (mv.type === 'SORTIE') item.exits += 1
+              return map
+            }, new Map())
+            .entries()
+        )
+      ).map(([month, item]: any) => ({
+        month,
+        productsMoved: item.productsMoved.size,
+        entries: item.entries,
+        exits: item.exits,
+      })).sort((a: any, b: any) => a.month.localeCompare(b.month))
     }
   } finally {
     loading.value = false
