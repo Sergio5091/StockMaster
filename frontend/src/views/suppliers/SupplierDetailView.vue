@@ -22,10 +22,15 @@
         <div class="card-premium rounded-2xl p-5">
           <h3 class="font-semibold mb-3 text-sm uppercase tracking-wide text-muted-foreground">Contact commercial</h3>
           <div class="flex items-center gap-3 mb-3">
-            <div class="w-10 h-10 rounded-xl bg-blue-100 flex items-center justify-center text-sm font-bold text-blue-600">{{ supplier.contactPrenom?.[0] }}{{ supplier.contactNom?.[0] }}</div>
-            <div><div class="font-semibold">{{ supplier.contactPrenom }} {{ supplier.contactNom }}</div><div class="text-xs text-muted-foreground">{{ supplier.contactEmail }}</div></div>
+            <div class="w-10 h-10 rounded-xl bg-blue-100 flex items-center justify-center text-sm font-bold text-blue-600">
+              {{ supplier.contactPrincipalPrenom?.[0] ?? '?' }}{{ supplier.contactPrincipalNom?.[0] ?? '' }}
+            </div>
+            <div>
+              <div class="font-semibold">{{ supplier.contactPrincipalPrenom }} {{ supplier.contactPrincipalNom }}</div>
+              <div class="text-xs text-muted-foreground">{{ supplier.contactPrincipalEmail || '—' }}</div>
+            </div>
           </div>
-          <div class="text-sm text-muted-foreground">{{ supplier.contactTelephone }}</div>
+          <div class="text-sm text-muted-foreground">{{ supplier.contactPrincipalTelephone || '—' }}</div>
         </div>
       </div>
 
@@ -34,15 +39,19 @@
         <div class="grid grid-cols-3 gap-4">
           <div class="kpi-card">
             <div class="text-xs text-muted-foreground mb-1 uppercase tracking-wide">Commandes</div>
-            <div class="text-3xl font-bold text-foreground">{{ supplier.commandesTotal }}</div>
+            <div class="text-3xl font-bold text-foreground">{{ supplier.commandesTotal ?? 0 }}</div>
           </div>
           <div class="kpi-card">
             <div class="text-xs text-muted-foreground mb-1 uppercase tracking-wide">Ponctualité</div>
-            <div class="text-3xl font-bold" :class="supplier.tauxRespectDelai >= 90 ? 'text-emerald-600' : supplier.tauxRespectDelai >= 75 ? 'text-amber-500' : 'text-red-500'">{{ supplier.tauxRespectDelai }}%</div>
+            <div class="text-3xl font-bold" :class="(supplier.tauxRespectDelai ?? 0) >= 90 ? 'text-emerald-600' : (supplier.tauxRespectDelai ?? 0) >= 75 ? 'text-amber-500' : 'text-red-500'">
+              {{ supplier.tauxRespectDelai != null ? supplier.tauxRespectDelai + '%' : '—' }}
+            </div>
           </div>
           <div class="kpi-card">
             <div class="text-xs text-muted-foreground mb-1 uppercase tracking-wide">Montant total</div>
-            <div class="text-xl font-bold text-foreground">{{ formatCurrency(supplier.montantTotal) }}</div>
+            <div class="text-xl font-bold text-foreground">
+              {{ supplier.montantTotal != null ? formatCurrency(supplier.montantTotal) : '—' }}
+            </div>
           </div>
         </div>
         <!-- Orders -->

@@ -138,8 +138,10 @@ import PageHeader from '@/components/common/PageHeader.vue'
 import StockIndicator from '@/components/common/StockIndicator.vue'
 import StockAdjustModal from '@/components/stocks/StockAdjustModal.vue'
 import { stockService, type StockItem } from '@/services/stock.service'
+import WarehouseService, { type Warehouse } from '@/services/warehouse.service'
 
 const stocks = ref<StockItem[]>([])
+const warehouses = ref<Warehouse[]>([])
 const loading = ref(false)
 const error = ref('')
 const search = ref('')
@@ -150,7 +152,12 @@ const pageSize = 12
 const adjustStock = ref<StockItem | null>(null)
 let searchTimer: ReturnType<typeof setTimeout>
 
-const entrepots = computed(() => [...new Set(stocks.value.map(s => s.entrepotNom).filter(Boolean))])
+// Entrepôts : union des entrepôts en stock + tous les entrepôts actifs
+const entrepots = computed(() => {
+  const fromStock = stocks.value.map(s => s.entrepotNom).filter(Boolean)
+  const fromWh = warehouses.value.filter(w => w.actif).map(w => w.nom)
+  return [...new Set([...fromStock, ...fromWh])].sort()
+})
 
 const filtered = computed(() => stocks.value.filter(s => {
   if (search.value && !`${s.produitNom} ${s.produitRef}`.toLowerCase().includes(search.value.toLowerCase())) return false
@@ -173,8 +180,13 @@ async function load() {
   loading.value = true
   error.value = ''
   try {
-    const data = await stockService.findAll(0, 500)
-    stocks.value = data.content
+    // Chargement en parallèle : stocks ET tous les entrepôts actifs
+    const [stockData, warehouseData] = await Promise.all([
+      stockService.findAll(0, 500),
+      WarehouseService.getAll(),
+    ])
+    stocks.value = stockData.content
+    warehouses.value = warehouseData
   } catch (e: any) {
     error.value = e?.response?.data?.message || 'Erreur lors du chargement des stocks'
   } finally {

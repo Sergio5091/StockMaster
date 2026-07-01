@@ -25,4 +25,14 @@ public class SupplierDTO {
     private boolean actif;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+
+    // Stats calculées (nombre de commandes, ponctualité, montant total)
+    @Builder.Default
+    private Long commandesTotal = 0L;
+
+    @Builder.Default
+    private Double tauxRespectDelai = 0.0;
+
+    @Builder.Default
+    private Double montantTotal = 0.0;
 }

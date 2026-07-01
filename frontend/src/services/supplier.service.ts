@@ -15,6 +15,10 @@ export interface Supplier {
   contactPrincipalEmail?: string
   delaiLivraisonJours: number
   actif: boolean
+  // Stats calculées par le backend
+  commandesTotal?: number
+  tauxRespectDelai?: number
+  montantTotal?: number
 }
 
 export interface SupplierCreateDTO {
