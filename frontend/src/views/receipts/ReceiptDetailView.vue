@@ -3,6 +3,11 @@
     <PageHeader :title="receipt.numero" :subtitle="`Bon de réception · ${receipt.fournisseurNom}`" back="Bons de réception">
       <template #actions>
         <StatusBadge :status="receipt.statut" :dot="true" />
+        <button v-if="receipt.statut === 'BROUILLON' && (can('create_receipt') || can('validate_receipt'))"
+          @click="submit"
+          class="btn-primary flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold text-white">
+          <Send :size="15" /> Soumettre
+        </button>
         <button v-if="can('validate_receipt') && receipt.statut === 'EN_ATTENTE_VALIDATION'" @click="validate" class="btn-primary flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold text-white"><CheckCircle2 :size="15" /> Valider</button>
         <button v-if="can('validate_receipt') && receipt.statut === 'EN_ATTENTE_VALIDATION'" @click="reject" class="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-red-300 text-red-600 bg-red-50 text-sm font-semibold hover:bg-red-100 transition-colors"><XCircle :size="15" /> Rejeter</button>
       </template>
@@ -64,7 +69,7 @@ import { formatDate } from '@/utils/formatters'
 import { receiptService } from '@/services/operations.service'
 import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
-import { CheckCircle2, XCircle, Check, X } from 'lucide-vue-next'
+import { CheckCircle2, XCircle, Check, X, Send } from 'lucide-vue-next'
 import PageHeader from '@/components/common/PageHeader.vue'
 import StatusBadge from '@/components/common/StatusBadge.vue'
 import { usePermissions } from '@/composables/usePermissions'
@@ -87,10 +92,16 @@ const timeline = computed(() => [
   { label: 'Soumis pour validation', done: receipt.value.statut !== 'BROUILLON' },
   { label: 'Validé', done: receipt.value.statut === 'VALIDE' },
 ])
+async function submit() {
+  try { receipt.value = await receiptService.submit(Number(route.params.id)) }
+  catch (e: any) { alert(e?.response?.data?.message || 'Erreur lors de la soumission') }
+}
 async function validate() {
-  try { receipt.value = await receiptService.validate(Number(route.params.id)) } catch {}
+  try { receipt.value = await receiptService.validate(Number(route.params.id)) }
+  catch (e: any) { alert(e?.response?.data?.message || 'Erreur lors de la validation') }
 }
 async function reject() {
-  try { receipt.value = await receiptService.reject(Number(route.params.id)) } catch {}
+  try { receipt.value = await receiptService.reject(Number(route.params.id)) }
+  catch (e: any) { alert(e?.response?.data?.message || 'Erreur lors du rejet') }
 }
 </script>

@@ -1,13 +1,10 @@
 package com.backend.stockmaster.stock.interfaces;
 
-import com.backend.stockmaster.stock.application.dto.StockDTO;
 import com.backend.stockmaster.stock.application.dto.StockMovementDTO;
 import com.backend.stockmaster.stock.application.service.StockApplicationService;
-import com.backend.stockmaster.stock.domain.MovementType;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
-import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
@@ -45,23 +42,20 @@ public class StockMovementController {
      */
     @PostMapping("/adjust")
     @Operation(summary = "Ajustement manuel du stock (entrée ou sortie avec justification)")
-    public ResponseEntity<StockDTO> adjust(@Valid @RequestBody AdjustRequest req) {
+    public ResponseEntity<StockMovementDTO> adjust(@Valid @RequestBody AdjustRequest req) {
         String user = currentUser();
-        String refDoc = "ADJ-" + System.currentTimeMillis();
+        String note = req.getJustification() + " [par " + user + "]";
 
-        StockDTO result;
-        if (req.getQuantite() > 0) {
-            result = stockService.addStock(
-                    req.getProduitId(), req.getEntrepotId(),
-                    req.getQuantite(), MovementType.AJUSTEMENT_INVENTAIRE,
-                    refDoc, null, req.getJustification() + " [par " + user + "]");
-        } else {
-            result = stockService.removeStock(
-                    req.getProduitId(), req.getEntrepotId(),
-                    Math.abs(req.getQuantite()), MovementType.AJUSTEMENT_INVENTAIRE,
-                    refDoc, null, req.getJustification() + " [par " + user + "]");
-        }
-        return ResponseEntity.ok(result);
+        // Utilise ajusterStock qui retourne le mouvement créé
+        com.backend.stockmaster.stock.application.dto.StockUpdateRequest updateReq =
+                new com.backend.stockmaster.stock.application.dto.StockUpdateRequest();
+        updateReq.setProduitId(req.getProduitId());
+        updateReq.setEntrepotId(req.getEntrepotId());
+        updateReq.setQuantite(req.getQuantite()); // positif ou négatif
+        updateReq.setJustification(note);
+
+        StockMovementDTO movement = stockService.ajusterStock(updateReq);
+        return ResponseEntity.ok(movement);
     }
 
     private String currentUser() {

@@ -14,7 +14,7 @@ export interface User {
 
 const DEMO_USERS: Record<string, { password: string; user: User }> = {
   'admin@stockmaster.com': {
-    password: 'Admin1234!',
+    password: 'Admin1234',
     user: {
       id: 1, nom: 'Dupont', prenom: 'Admin', email: 'admin@stockmaster.com',
       role: 'ROLE_ADMIN', actif: true,
@@ -22,7 +22,7 @@ const DEMO_USERS: Record<string, { password: string; user: User }> = {
     },
   },
   'manager@stockmaster.com': {
-    password: 'Manager1234!',
+    password: 'Manager1234',
     user: {
       id: 2, nom: 'Martin', prenom: 'Bernard', email: 'manager@stockmaster.com',
       role: 'ROLE_MANAGER', actif: true,
@@ -30,7 +30,7 @@ const DEMO_USERS: Record<string, { password: string; user: User }> = {
     },
   },
   'operator@stockmaster.com': {
-    password: 'Operator1234!',
+    password: 'Operator1234',
     user: {
       id: 3, nom: 'Leroy', prenom: 'Claire', email: 'operator@stockmaster.com',
       role: 'ROLE_OPERATOR', actif: true,
@@ -38,7 +38,7 @@ const DEMO_USERS: Record<string, { password: string; user: User }> = {
     },
   },
   'auditor@stockmaster.com': {
-    password: 'Auditor1234!',
+    password: 'Auditor1234',
     user: {
       id: 4, nom: 'Moreau', prenom: 'David', email: 'auditor@stockmaster.com',
       role: 'ROLE_AUDITOR', actif: true,
@@ -79,45 +79,56 @@ export const useAuthStore = defineStore('auth', () => {
       return { success: false, error: `Compte bloqué. Réessayez dans ${mins} minute(s).` }
     }
 
-    // Dériver le username depuis l'email (ex: admin@stockmaster.com → admin)
+    // ── Tentative via backend ──────────────────────────────────────
     const username = email.includes('@') ? email.split('@')[0] : email
-
     try {
       const { data } = await import('../services/api').then(m => m.default.post('/auth/login', { username, password }))
       loginAttempts.value = 0
       blockedUntil.value = null
-
       token.value = data.token
       localStorage.setItem('sm_token', data.token)
       if (data.refreshToken) localStorage.setItem('sm_refreshToken', data.refreshToken)
-
-      // Construire l'objet user depuis la réponse backend
       const backendUser = data.user
       const roleMap: Record<string, User['role']> = {
-        ADMINISTRATEUR: 'ROLE_ADMIN',
-        GESTIONNAIRE: 'ROLE_MANAGER',
-        MAGASINIER: 'ROLE_OPERATOR',
-        AUDITEUR: 'ROLE_AUDITOR',
+        ADMINISTRATEUR: 'ROLE_ADMIN', GESTIONNAIRE: 'ROLE_MANAGER',
+        MAGASINIER: 'ROLE_OPERATOR', AUDITEUR: 'ROLE_AUDITOR',
+        ROLE_ADMIN: 'ROLE_ADMIN', ROLE_MANAGER: 'ROLE_MANAGER',
+        ROLE_OPERATOR: 'ROLE_OPERATOR', ROLE_AUDITOR: 'ROLE_AUDITOR',
       }
       user.value = {
         id: backendUser.id,
-        nom: backendUser.fullName?.split(' ').slice(1).join(' ') || '',
-        prenom: backendUser.fullName?.split(' ')[0] || '',
-        email: backendUser.email,
+        nom: backendUser.fullName?.split(' ').slice(1).join(' ') || backendUser.username || '',
+        prenom: backendUser.fullName?.split(' ')[0] || backendUser.username || '',
+        email: backendUser.email || backendUser.username || '',
         role: roleMap[backendUser.role] ?? 'ROLE_OPERATOR',
-        actif: true,
-        entrepots: [],
+        actif: true, entrepots: [],
       }
       localStorage.setItem('sm_user', JSON.stringify(user.value))
       return { success: true }
-    } catch (err: any) {
+    } catch (apiErr: any) {
+      // ── Fallback démo si backend non disponible ──────────────────
+      const networkError = !apiErr?.response // pas de réponse = backend éteint
+      if (networkError) {
+        const entry = DEMO_USERS[email.toLowerCase()]
+        if (entry && entry.password === password) {
+          loginAttempts.value = 0
+          const mockToken = `demo.${btoa(email)}.${Date.now()}`
+          token.value = mockToken
+          user.value = entry.user
+          localStorage.setItem('sm_token', mockToken)
+          localStorage.setItem('sm_user', JSON.stringify(entry.user))
+          return { success: true }
+        }
+        return { success: false, error: 'Backend indisponible et identifiants démo incorrects.' }
+      }
+      // Erreur 401 ou autre erreur backend
       loginAttempts.value++
       if (loginAttempts.value >= 5) {
         blockedUntil.value = new Date(Date.now() + 15 * 60 * 1000)
         loginAttempts.value = 0
         return { success: false, error: 'Trop de tentatives. Compte bloqué 15 minutes.' }
       }
-      const msg = err?.response?.data?.message || err?.response?.data || 'Identifiants invalides'
+      const msg = apiErr?.response?.data?.message || apiErr?.response?.data || 'Identifiants invalides'
       return { success: false, error: `${msg}. Tentative ${loginAttempts.value}/5.` }
     }
   }
