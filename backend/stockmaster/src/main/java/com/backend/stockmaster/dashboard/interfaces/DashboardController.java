@@ -17,7 +17,7 @@ public class DashboardController {
     private final DashboardService dashboardService;
 
     @GetMapping("/kpis")
-    @PreAuthorize("hasAnyRole('ADMIN', 'GESTIONNAIRE_ENTREPOT', 'AUDITEUR')")
+    @PreAuthorize("hasAnyRole('ADMINISTRATEUR', 'GESTIONNAIRE', 'MAGASINIER', 'AUDITEUR')")
     public ResponseEntity<DashboardKPIDTO> getKPIs() {
         return ResponseEntity.ok(dashboardService.getDashboardKPIs());
     }

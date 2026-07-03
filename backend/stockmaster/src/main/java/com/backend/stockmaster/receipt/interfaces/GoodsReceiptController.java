@@ -11,6 +11,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -34,24 +35,28 @@ public class GoodsReceiptController {
     }
 
     @PostMapping
+    @PreAuthorize("hasAnyRole('ADMINISTRATEUR', 'GESTIONNAIRE', 'MAGASINIER')")
     @Operation(summary = "Créer un bon de réception")
     public ResponseEntity<ReceiptDTO> create(@Valid @RequestBody ReceiptCreateDTO dto) {
         return ResponseEntity.status(HttpStatus.CREATED).body(receiptService.create(dto));
     }
 
     @PostMapping("/{id}/submit")
+    @PreAuthorize("hasAnyRole('ADMINISTRATEUR', 'GESTIONNAIRE', 'MAGASINIER')")
     @Operation(summary = "Soumettre pour validation")
     public ResponseEntity<ReceiptDTO> submit(@PathVariable Long id) {
         return ResponseEntity.ok(receiptService.submit(id));
     }
 
     @PostMapping("/{id}/validate")
-    @Operation(summary = "Valider le bon (met à jour le stock)")
+    @PreAuthorize("hasAnyRole('ADMINISTRATEUR', 'GESTIONNAIRE')")
+    @Operation(summary = "Valider le bon (met à jour le stock automatiquement)")
     public ResponseEntity<ReceiptDTO> validate(@PathVariable Long id) {
         return ResponseEntity.ok(receiptService.validate(id));
     }
 
     @PostMapping("/{id}/reject")
+    @PreAuthorize("hasAnyRole('ADMINISTRATEUR', 'GESTIONNAIRE')")
     @Operation(summary = "Rejeter le bon")
     public ResponseEntity<ReceiptDTO> reject(@PathVariable Long id) {
         return ResponseEntity.ok(receiptService.reject(id));

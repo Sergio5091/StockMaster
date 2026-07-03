@@ -154,11 +154,17 @@
 			<version>1.9.0</version>
 		</dependency> -->
 		
-		<!-- Mail : désactivé (pas dans cache local) -->
-		<!-- <dependency>
+		<!-- Mail -->
+		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-mail</artifactId>
-		</dependency> -->
+		</dependency>
+		
+		<!-- AOP pour audit -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-aop</artifactId>
+		</dependency>
 	</dependencies>
 
 	<build>

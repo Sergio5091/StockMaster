@@ -87,60 +87,31 @@ public class DashboardService {
     }
 
     private Long calculateProductsInStock() {
-        return stockRepository.findAll().stream()
-                .filter(s -> s.getQuantiteDisponible() > 0)
-                .count();
+        return stockRepository.countProductsInStock();
     }
 
     private Long calculateCriticalStockProducts() {
-        return productRepository.findAll().stream()
-                .filter(p -> {
-                    var stock = stockRepository.findAll().stream()
-                            .filter(s -> s.getProduitId().equals(p.getId()))
-                            .findFirst();
-                    return stock.isPresent() && 
-                           p.getStockMinimum() != null &&
-                           stock.get().getQuantiteDisponible() <= p.getStockMinimum();
-                })
-                .count();
+        return stockRepository.countCriticalStockProducts();
     }
 
     private BigDecimal calculateTotalStockValue() {
-        return productRepository.findAll().stream()
-                .map(p -> {
-                    var stock = stockRepository.findAll().stream()
-                            .filter(s -> s.getProduitId().equals(p.getId()))
-                            .findFirst();
-                    if (stock.isPresent() && p.getPrixAchat() != null) {
-                        return BigDecimal.valueOf(stock.get().getQuantiteDisponible())
-                                .multiply(p.getPrixAchat());
-                    }
-                    return BigDecimal.ZERO;
-                })
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal value = stockRepository.calculateTotalStockValue();
+        return value != null ? value : BigDecimal.ZERO;
     }
 
     private Long calculateTotalMovementsThisMonth() {
         LocalDateTime firstDay = LocalDate.now().withDayOfMonth(1).atStartOfDay();
-        return stockMovementRepository.findAll().stream()
-                .filter(m -> m.getCreatedAt() != null && m.getCreatedAt().isAfter(firstDay))
-                .count();
+        return stockMovementRepository.countSince(firstDay);
     }
 
     private Long calculateIncomingMovementsThisMonth() {
         LocalDateTime firstDay = LocalDate.now().withDayOfMonth(1).atStartOfDay();
-        return stockMovementRepository.findAll().stream()
-                .filter(m -> m.getCreatedAt() != null && m.getCreatedAt().isAfter(firstDay)
-                        && com.backend.stockmaster.stock.domain.MovementType.ENTREE == m.getType())
-                .count();
+        return stockMovementRepository.countSinceByType(firstDay, com.backend.stockmaster.stock.domain.MovementType.ENTREE);
     }
 
     private Long calculateOutgoingMovementsThisMonth() {
         LocalDateTime firstDay = LocalDate.now().withDayOfMonth(1).atStartOfDay();
-        return stockMovementRepository.findAll().stream()
-                .filter(m -> m.getCreatedAt() != null && m.getCreatedAt().isAfter(firstDay)
-                        && com.backend.stockmaster.stock.domain.MovementType.SORTIE == m.getType())
-                .count();
+        return stockMovementRepository.countSinceByType(firstDay, com.backend.stockmaster.stock.domain.MovementType.SORTIE);
     }
 
     private Long calculatePendingInventories() {
@@ -172,21 +143,10 @@ public class DashboardService {
             LocalDateTime startOfMonth = month.atDay(1).atStartOfDay();
             LocalDateTime endOfMonth = month.atEndOfMonth().atTime(23, 59, 59);
 
-            long incoming = stockMovementRepository.findAll().stream()
-                    .filter(m -> m.getCreatedAt() != null
-                            && m.getCreatedAt().isAfter(startOfMonth)
-                            && m.getCreatedAt().isBefore(endOfMonth)
-                            && com.backend.stockmaster.stock.domain.MovementType.ENTREE == m.getType())
-                    .mapToLong(m -> m.getQuantite() != null ? m.getQuantite() : 0)
-                    .sum();
-
-            long outgoing = stockMovementRepository.findAll().stream()
-                    .filter(m -> m.getCreatedAt() != null
-                            && m.getCreatedAt().isAfter(startOfMonth)
-                            && m.getCreatedAt().isBefore(endOfMonth)
-                            && com.backend.stockmaster.stock.domain.MovementType.SORTIE == m.getType())
-                    .mapToLong(m -> m.getQuantite() != null ? m.getQuantite() : 0)
-                    .sum();
+            long incoming = stockMovementRepository.sumQuantityByTypeAndPeriod(
+                    startOfMonth, endOfMonth, com.backend.stockmaster.stock.domain.MovementType.ENTREE);
+            long outgoing = stockMovementRepository.sumQuantityByTypeAndPeriod(
+                    startOfMonth, endOfMonth, com.backend.stockmaster.stock.domain.MovementType.SORTIE);
 
             result.add(StockMovementChartDTO.builder()
                     .month(month.toString())

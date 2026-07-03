@@ -12,6 +12,7 @@ import com.backend.stockmaster.zone.repository.ZoneRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -77,9 +78,9 @@ public class AlertService {
     }
 
     /** Analyse les stocks et génère les alertes critiques/excessives manquantes */
+    @Scheduled(cron = "0 0 * * * *") // toutes les heures
     @Transactional
-    public int generateStockAlerts() {
-        // Charger en une seule requête les titres des alertes non traitées existantes
+    public int generateStockAlerts() {        // Charger en une seule requête les titres des alertes non traitées existantes
         // pour éviter le O(n²) avec findAll() dans chaque itération
         java.util.Set<String> existingTitles = alertRepository.findByTraitee(false, Pageable.unpaged())
                 .stream()
@@ -147,6 +148,7 @@ public class AlertService {
     }
 
     /** Supprime les alertes traitées de plus de 30 jours */
+    @Scheduled(cron = "0 0 2 * * *") // tous les jours à 2h du matin
     @Transactional
     public void cleanupOldAlerts() {
         LocalDateTime cutoff = LocalDateTime.now().minusDays(30);

@@ -9,6 +9,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -21,12 +22,14 @@ public class LocationController {
     private final LocationService locationService;
 
     @GetMapping("/api/zones/{zoneId}/locations")
+    @PreAuthorize("hasAnyRole('ADMINISTRATEUR', 'GESTIONNAIRE', 'MAGASINIER', 'AUDITEUR')")
     @Operation(summary = "Lister les emplacements d'une zone")
     public ResponseEntity<List<LocationDTO>> findByZone(@PathVariable Long zoneId) {
         return ResponseEntity.ok(locationService.findByZone(zoneId));
     }
 
     @PostMapping("/api/zones/{zoneId}/locations")
+    @PreAuthorize("hasAnyRole('ADMINISTRATEUR', 'GESTIONNAIRE')")
     @Operation(summary = "Créer un emplacement dans une zone")
     public ResponseEntity<LocationDTO> create(@PathVariable Long zoneId,
             @Valid @RequestBody LocationCreateDTO dto) {
@@ -34,12 +37,14 @@ public class LocationController {
     }
 
     @GetMapping("/api/locations/{id}")
+    @PreAuthorize("hasAnyRole('ADMINISTRATEUR', 'GESTIONNAIRE', 'MAGASINIER', 'AUDITEUR')")
     @Operation(summary = "Obtenir un emplacement")
     public ResponseEntity<LocationDTO> findById(@PathVariable Long id) {
         return ResponseEntity.ok(locationService.findById(id));
     }
 
     @PatchMapping("/api/locations/{id}/status")
+    @PreAuthorize("hasAnyRole('ADMINISTRATEUR', 'GESTIONNAIRE', 'MAGASINIER')")
     @Operation(summary = "Changer le statut d'un emplacement")
     public ResponseEntity<LocationDTO> updateStatus(@PathVariable Long id,
             @RequestParam LocationStatus statut) {
@@ -47,6 +52,7 @@ public class LocationController {
     }
 
     @DeleteMapping("/api/locations/{id}")
+    @PreAuthorize("hasRole('ADMINISTRATEUR')")
     @Operation(summary = "Désactiver un emplacement")
     public ResponseEntity<Void> delete(@PathVariable Long id) {
         locationService.delete(id);

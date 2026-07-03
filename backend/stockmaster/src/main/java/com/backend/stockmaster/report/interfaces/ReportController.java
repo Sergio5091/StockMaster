@@ -17,7 +17,7 @@ public class ReportController {
 
     // ============ STOCK REPORTS ============
     @GetMapping("/stock/pdf")
-    @PreAuthorize("hasAnyRole('ADMIN', 'GESTIONNAIRE_ENTREPOT', 'AUDITEUR')")
+    @PreAuthorize("hasAnyRole('ADMINISTRATEUR', 'GESTIONNAIRE', 'AUDITEUR')")
     public ResponseEntity<byte[]> getStockReportPDF() throws Exception {
         byte[] pdf = reportService.generateInventoryReportPDF();
         return ResponseEntity.ok()
@@ -28,7 +28,7 @@ public class ReportController {
 
     // ============ INVENTORY REPORTS ============
     @GetMapping("/inventory/pdf")
-    @PreAuthorize("hasAnyRole('ADMIN', 'GESTIONNAIRE_ENTREPOT', 'AUDITEUR')")
+    @PreAuthorize("hasAnyRole('ADMINISTRATEUR', 'GESTIONNAIRE', 'AUDITEUR')")
     public ResponseEntity<byte[]> getInventoryReportPDF() throws Exception {
         byte[] pdf = reportService.generateInventoryReportPDF();
         return ResponseEntity.ok()
@@ -38,7 +38,7 @@ public class ReportController {
     }
 
     @GetMapping("/inventory/excel")
-    @PreAuthorize("hasAnyRole('ADMIN', 'GESTIONNAIRE_ENTREPOT', 'AUDITEUR')")
+    @PreAuthorize("hasAnyRole('ADMINISTRATEUR', 'GESTIONNAIRE', 'AUDITEUR')")
     public ResponseEntity<byte[]> getInventoryReportExcel() throws Exception {
         byte[] excel = reportService.generateInventoryReportExcel();
         return ResponseEntity.ok()
@@ -48,7 +48,7 @@ public class ReportController {
     }
 
     @GetMapping("/inventory/csv")
-    @PreAuthorize("hasAnyRole('ADMIN', 'GESTIONNAIRE_ENTREPOT', 'AUDITEUR')")
+    @PreAuthorize("hasAnyRole('ADMINISTRATEUR', 'GESTIONNAIRE', 'AUDITEUR')")
     public ResponseEntity<byte[]> getInventoryReportCSV() throws Exception {
         byte[] csv = reportService.generateInventoryReportCSV();
         return ResponseEntity.ok()
@@ -59,7 +59,7 @@ public class ReportController {
 
     // ============ MOVEMENTS REPORTS ============
     @GetMapping("/movements/pdf")
-    @PreAuthorize("hasAnyRole('ADMIN', 'GESTIONNAIRE_ENTREPOT', 'AUDITEUR')")
+    @PreAuthorize("hasAnyRole('ADMINISTRATEUR', 'GESTIONNAIRE', 'AUDITEUR')")
     public ResponseEntity<byte[]> getMovementsReportPDF() throws Exception {
         byte[] pdf = reportService.generateMovementsReportPDF();
         return ResponseEntity.ok()
@@ -69,7 +69,7 @@ public class ReportController {
     }
 
     @GetMapping("/movements/excel")
-    @PreAuthorize("hasAnyRole('ADMIN', 'GESTIONNAIRE_ENTREPOT', 'AUDITEUR')")
+    @PreAuthorize("hasAnyRole('ADMINISTRATEUR', 'GESTIONNAIRE', 'AUDITEUR')")
     public ResponseEntity<byte[]> getMovementsReportExcel() throws Exception {
         byte[] excel = reportService.generateMovementsReportExcel();
         return ResponseEntity.ok()
@@ -79,7 +79,7 @@ public class ReportController {
     }
 
     @GetMapping("/movements/csv")
-    @PreAuthorize("hasAnyRole('ADMIN', 'GESTIONNAIRE_ENTREPOT', 'AUDITEUR')")
+    @PreAuthorize("hasAnyRole('ADMINISTRATEUR', 'GESTIONNAIRE', 'AUDITEUR')")
     public ResponseEntity<byte[]> getMovementsReportCSV() throws Exception {
         byte[] csv = reportService.generateMovementsReportCSV();
         return ResponseEntity.ok()
@@ -90,7 +90,7 @@ public class ReportController {
 
     // ============ RECEIPTS REPORTS ============
     @GetMapping("/receipts/pdf")
-    @PreAuthorize("hasAnyRole('ADMIN', 'GESTIONNAIRE_ENTREPOT', 'AUDITEUR')")
+    @PreAuthorize("hasAnyRole('ADMINISTRATEUR', 'GESTIONNAIRE', 'AUDITEUR')")
     public ResponseEntity<byte[]> getReceiptsReportPDF() throws Exception {
         byte[] pdf = reportService.generateReceiptsReportPDF();
         return ResponseEntity.ok()
@@ -100,7 +100,7 @@ public class ReportController {
     }
 
     @GetMapping("/receipts/excel")
-    @PreAuthorize("hasAnyRole('ADMIN', 'GESTIONNAIRE_ENTREPOT', 'AUDITEUR')")
+    @PreAuthorize("hasAnyRole('ADMINISTRATEUR', 'GESTIONNAIRE', 'AUDITEUR')")
     public ResponseEntity<byte[]> getReceiptsReportExcel() throws Exception {
         byte[] excel = reportService.generateReceiptsReportExcel();
         return ResponseEntity.ok()
@@ -110,7 +110,7 @@ public class ReportController {
     }
 
     @GetMapping("/receipts/csv")
-    @PreAuthorize("hasAnyRole('ADMIN', 'GESTIONNAIRE_ENTREPOT', 'AUDITEUR')")
+    @PreAuthorize("hasAnyRole('ADMINISTRATEUR', 'GESTIONNAIRE', 'AUDITEUR')")
     public ResponseEntity<byte[]> getReceiptsReportCSV() throws Exception {
         byte[] csv = reportService.generateReceiptsReportCSV();
         return ResponseEntity.ok()

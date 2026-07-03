@@ -11,6 +11,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -34,24 +35,28 @@ public class GoodsIssueController {
     }
 
     @PostMapping
+    @PreAuthorize("hasAnyRole('ADMINISTRATEUR', 'GESTIONNAIRE', 'MAGASINIER')")
     @Operation(summary = "Créer un bon de sortie")
     public ResponseEntity<IssueDTO> create(@Valid @RequestBody IssueCreateDTO dto) {
         return ResponseEntity.status(HttpStatus.CREATED).body(issueService.create(dto));
     }
 
     @PostMapping("/{id}/submit")
+    @PreAuthorize("hasAnyRole('ADMINISTRATEUR', 'GESTIONNAIRE', 'MAGASINIER')")
     @Operation(summary = "Soumettre pour validation")
     public ResponseEntity<IssueDTO> submit(@PathVariable Long id) {
         return ResponseEntity.ok(issueService.submit(id));
     }
 
     @PostMapping("/{id}/validate")
-    @Operation(summary = "Valider et déduire le stock")
+    @PreAuthorize("hasAnyRole('ADMINISTRATEUR', 'GESTIONNAIRE')")
+    @Operation(summary = "Valider et déduire le stock automatiquement")
     public ResponseEntity<IssueDTO> validate(@PathVariable Long id) {
         return ResponseEntity.ok(issueService.validate(id));
     }
 
     @PostMapping("/{id}/cancel")
+    @PreAuthorize("hasAnyRole('ADMINISTRATEUR', 'GESTIONNAIRE')")
     @Operation(summary = "Annuler un bon de sortie")
     public ResponseEntity<IssueDTO> cancel(@PathVariable Long id) {
         return ResponseEntity.ok(issueService.cancel(id));

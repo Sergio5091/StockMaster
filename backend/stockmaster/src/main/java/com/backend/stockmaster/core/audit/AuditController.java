@@ -18,13 +18,13 @@ public class AuditController {
     private final AuditService auditService;
 
     @GetMapping("/logs")
-    @PreAuthorize("hasAnyRole('ADMIN', 'AUDITEUR')")
+    @PreAuthorize("hasAnyRole('ADMINISTRATEUR', 'AUDITEUR')")
     public ResponseEntity<Page<AuditLog>> getAllAuditLogs(Pageable pageable) {
         return ResponseEntity.ok(auditService.getAllAuditLogs(pageable));
     }
 
     @GetMapping("/logs/user/{userName}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'AUDITEUR')")
+    @PreAuthorize("hasAnyRole('ADMINISTRATEUR', 'AUDITEUR')")
     public ResponseEntity<Page<AuditLog>> getAuditLogsByUser(
             @PathVariable String userName,
             Pageable pageable) {
@@ -32,7 +32,7 @@ public class AuditController {
     }
 
     @GetMapping("/logs/entity/{entityName}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'AUDITEUR')")
+    @PreAuthorize("hasAnyRole('ADMINISTRATEUR', 'AUDITEUR')")
     public ResponseEntity<Page<AuditLog>> getAuditLogsByEntity(
             @PathVariable String entityName,
             Pageable pageable) {
@@ -40,7 +40,7 @@ public class AuditController {
     }
 
     @GetMapping("/logs/date-range")
-    @PreAuthorize("hasAnyRole('ADMIN', 'AUDITEUR')")
+    @PreAuthorize("hasAnyRole('ADMINISTRATEUR', 'AUDITEUR')")
     public ResponseEntity<Page<AuditLog>> getAuditLogsByDateRange(
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime start,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime end,
@@ -49,7 +49,7 @@ public class AuditController {
     }
 
     @GetMapping("/logs/count")
-    @PreAuthorize("hasAnyRole('ADMIN', 'AUDITEUR')")
+    @PreAuthorize("hasAnyRole('ADMINISTRATEUR', 'AUDITEUR')")
     public ResponseEntity<Long> countAuditLogs() {
         return ResponseEntity.ok(auditService.countAuditLogs());
     }

@@ -12,6 +12,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
@@ -41,6 +42,7 @@ public class StockMovementController {
      * Quantité positive = entrée, quantité négative = sortie.
      */
     @PostMapping("/adjust")
+    @PreAuthorize("hasAnyRole('ADMINISTRATEUR', 'GESTIONNAIRE')")
     @Operation(summary = "Ajustement manuel du stock (entrée ou sortie avec justification)")
     public ResponseEntity<StockMovementDTO> adjust(@Valid @RequestBody AdjustRequest req) {
         String user = currentUser();
