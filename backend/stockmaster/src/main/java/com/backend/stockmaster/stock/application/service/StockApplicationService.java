@@ -27,6 +27,10 @@ public class StockApplicationService {
     private final ProductRepository productRepository;
     private final WarehouseRepository warehouseRepository;
 
+    /**
+     * Ajoute du stock sans verrou (pour les lectures simples).
+     * Pour les opérations critiques, utiliser addStockThreadSafe.
+     */
     @Transactional
     public void addStock(Long produitId, Long entrepotId, Integer quantite,
                          MovementType type, String reference, Object ignored, String note) {
@@ -42,6 +46,34 @@ public class StockApplicationService {
                 .referenceDocument(reference).note(note).build());
     }
 
+    /**
+     * Ajoute du stock avec verrou pessimiste (thread-safe).
+     * Utilisé pour les opérations critiques nécessitant une garantie de cohérence.
+     */
+    @Transactional
+    public void addStockThreadSafe(Long produitId, Long entrepotId, Integer quantite,
+                                    MovementType type, String reference, String note) {
+        Stock stock = stockRepository.findByProduitIdAndEntrepotIdForUpdate(produitId, entrepotId)
+                .orElseGet(() -> {
+                    Stock newStock = Stock.builder().produitId(produitId).entrepotId(entrepotId).build();
+                    return stockRepository.save(newStock);
+                });
+        
+        int avant = stock.getQuantiteDisponible();
+        stock.setQuantiteDisponible(avant + quantite);
+        stockRepository.save(stock);
+        
+        stockMovementRepository.save(StockMovement.builder()
+                .type(type).produitId(produitId)
+                .entrepotDestinationId(entrepotId)
+                .quantite(quantite).quantiteAvant(avant).quantiteApres(stock.getQuantiteDisponible())
+                .referenceDocument(reference).note(note).build());
+    }
+
+    /**
+     * Retire du stock sans verrou (pour les lectures simples).
+     * Pour les opérations critiques, utiliser removeStockThreadSafe.
+     */
     @Transactional
     public void removeStock(Long produitId, Long entrepotId, Integer quantite,
                             MovementType type, String reference, Object ignored, String note) {
@@ -52,6 +84,31 @@ public class StockApplicationService {
         int avant = stock.getQuantiteDisponible();
         stock.setQuantiteDisponible(avant - quantite);
         stockRepository.save(stock);
+        stockMovementRepository.save(StockMovement.builder()
+                .type(type).produitId(produitId)
+                .entrepotSourceId(entrepotId)
+                .quantite(quantite).quantiteAvant(avant).quantiteApres(stock.getQuantiteDisponible())
+                .referenceDocument(reference).note(note).build());
+    }
+
+    /**
+     * Retire du stock avec verrou pessimiste (thread-safe).
+     * Utilisé pour les opérations critiques nécessitant une garantie de cohérence.
+     */
+    @Transactional
+    public void removeStockThreadSafe(Long produitId, Long entrepotId, Integer quantite,
+                                      MovementType type, String reference, String note) {
+        Stock stock = stockRepository.findByProduitIdAndEntrepotIdForUpdate(produitId, entrepotId)
+                .orElseThrow(() -> new BusinessException("Stock introuvable pour ce produit/entrepôt"));
+        
+        if (stock.getQuantiteDisponible() < quantite) {
+            throw new BusinessException("Stock insuffisant : disponible=" + stock.getQuantiteDisponible() + ", demandé=" + quantite);
+        }
+        
+        int avant = stock.getQuantiteDisponible();
+        stock.setQuantiteDisponible(avant - quantite);
+        stockRepository.save(stock);
+        
         stockMovementRepository.save(StockMovement.builder()
                 .type(type).produitId(produitId)
                 .entrepotSourceId(entrepotId)
@@ -92,34 +149,61 @@ public class StockApplicationService {
     }
 
     /**
-     * Ajustement manuel : quantite > 0 = entrée, quantite < 0 = sortie.
+     * Ajustement manuel avec verrou pessimiste : quantite > 0 = entrée, quantite < 0 = sortie.
      * Le type peut être forcé explicitement via le request.
+     * Utilise un verrou pessimiste pour garantir la cohérence en environnement concurrent.
      */
     @Transactional
     public StockMovementDTO ajusterStock(StockUpdateRequest req) {
-        if (req.getQuantite() == null || req.getQuantite() == 0)
+        if (req.getQuantite() == null || req.getQuantite() == 0) {
             throw new BusinessException("La quantité d'ajustement ne peut pas être zéro");
+        }
+
+        // Acquisition du verrou pessimiste
+        Stock stock = stockRepository.findByProduitIdAndEntrepotIdForUpdate(req.getProduitId(), req.getEntrepotId())
+                .orElseGet(() -> {
+                    Stock newStock = Stock.builder()
+                            .produitId(req.getProduitId())
+                            .entrepotId(req.getEntrepotId())
+                            .build();
+                    return stockRepository.save(newStock);
+                });
 
         MovementType type = req.getType();
         if (type == null) {
-            type = req.getQuantite() > 0 ? MovementType.ENTREE : MovementType.SORTIE;
+            type = req.getQuantite() > 0 ? MovementType.AJUSTEMENT_INVENTAIRE : MovementType.AJUSTEMENT_INVENTAIRE;
         }
 
-        int qte = Math.abs(req.getQuantite());
+        int avant = stock.getQuantiteDisponible();
+        int quantiteFinale = avant + req.getQuantite();
+
+        // Validation : le stock ne peut pas être négatif
+        if (quantiteFinale < 0) {
+            throw new BusinessException("Ajustement impossible : le stock résultant serait négatif (actuel=" + avant + ", ajustement=" + req.getQuantite() + ")");
+        }
+
+        stock.setQuantiteDisponible(quantiteFinale);
+        stockRepository.save(stock);
+
         String reference = "AJUST-" + System.currentTimeMillis();
+        StockMovement movement = StockMovement.builder()
+                .type(type)
+                .produitId(req.getProduitId())
+                .quantite(Math.abs(req.getQuantite()))
+                .quantiteAvant(avant)
+                .quantiteApres(quantiteFinale)
+                .referenceDocument(reference)
+                .note(req.getJustification())
+                .build();
 
         if (req.getQuantite() > 0) {
-            addStock(req.getProduitId(), req.getEntrepotId(), qte, type, reference, null, req.getJustification());
+            movement.setEntrepotDestinationId(req.getEntrepotId());
         } else {
-            removeStock(req.getProduitId(), req.getEntrepotId(), qte, type, reference, null, req.getJustification());
+            movement.setEntrepotSourceId(req.getEntrepotId());
         }
 
-        return stockMovementRepository
-                .findByReferenceDocument(reference)
-                .stream()
-                .findFirst()
-                .map(this::toMovementDTO)
-                .orElseThrow(() -> new BusinessException("Erreur lors de la création du mouvement"));
+        stockMovementRepository.save(movement);
+        return toMovementDTO(movement);
     }
 
     public Page<StockMovementDTO> findMovementsByEntrepot(Long entrepotId, Pageable pageable) {

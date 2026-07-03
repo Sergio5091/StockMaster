@@ -5,11 +5,26 @@ import com.backend.stockmaster.user.domain.User;
 import com.backend.stockmaster.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.context.annotation.Profile;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
+/**
+ * Seed des données de base pour les environnements de développement et test.
+ * 
+ * ⚠️ SÉCURITÉ : 
+ * - Actif uniquement avec les profils 'dev' ou 'test'
+ * - Peut être désactivé via app.seed.enabled=false
+ * - Les mots de passe par défaut DOIVENT être changés en production
+ * 
+ * Pour activer en production (NON RECOMMANDÉ) :
+ * - Ajouter le profil 'dev' : --spring.profiles.active=prod,dev
+ * - OU définir app.seed.enabled=true
+ */
 @Component
+@Profile({"dev", "test"})
 @RequiredArgsConstructor
 @Slf4j
 public class DataSeeder implements CommandLineRunner {
@@ -17,8 +32,17 @@ public class DataSeeder implements CommandLineRunner {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
 
+    @Value("${app.seed.enabled:true}")
+    private boolean seedEnabled;
+
     @Override
     public void run(String... args) {
+        if (!seedEnabled) {
+            log.info("⏭️ Seed des données désactivé (app.seed.enabled=false)");
+            return;
+        }
+        
+        log.warn("⚠️ Mode développement : seed des utilisateurs avec mots de passe par défaut");
         seedUsers();
     }
 
