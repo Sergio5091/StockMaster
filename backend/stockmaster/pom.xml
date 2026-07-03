@@ -160,10 +160,10 @@
 			<artifactId>spring-boot-starter-mail</artifactId>
 		</dependency>
 		
-		<!-- AOP pour audit -->
+		<!-- AOP pour audit (inclus via AspectJ directement, compatible Spring Boot 4.x) -->
 		<dependency>
-			<groupId>org.springframework.boot</groupId>
-			<artifactId>spring-boot-starter-aop</artifactId>
+			<groupId>org.aspectj</groupId>
+			<artifactId>aspectjweaver</artifactId>
 		</dependency>
 	</dependencies>
 
