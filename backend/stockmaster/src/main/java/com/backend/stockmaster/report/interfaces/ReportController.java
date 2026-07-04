@@ -15,6 +15,17 @@ public class ReportController {
 
     private final ReportService reportService;
 
+    // ============ STOCK REPORTS ============
+    @GetMapping("/stock/pdf")
+    @PreAuthorize("hasAnyRole('ADMIN', 'GESTIONNAIRE_ENTREPOT', 'AUDITEUR')")
+    public ResponseEntity<byte[]> getStockReportPDF() throws Exception {
+        byte[] pdf = reportService.generateInventoryReportPDF();
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=rapport_stocks.pdf")
+                .contentType(MediaType.APPLICATION_PDF)
+                .body(pdf);
+    }
+
     // ============ INVENTORY REPORTS ============
     @GetMapping("/inventory/pdf")
     @PreAuthorize("hasAnyRole('ADMIN', 'GESTIONNAIRE_ENTREPOT', 'AUDITEUR')")

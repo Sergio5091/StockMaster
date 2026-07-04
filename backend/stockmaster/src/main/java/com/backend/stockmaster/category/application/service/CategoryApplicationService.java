@@ -74,6 +74,14 @@ public class CategoryApplicationService {
     }
 
     @Transactional(readOnly = true)
+    public List<CategoryDTO> findRootCategories() {
+        return categoryRepository.findByParentIdIsNullAndActifTrue().stream()
+                .map(categoryMapper::toDTO)
+                .map(this::enrich)
+                .collect(Collectors.toList());
+    }
+
+    @Transactional(readOnly = true)
     public List<CategoryDTO> findSubCategories(Long parentId) {
         return categoryRepository.findByParentId(parentId).stream()
                 .filter(Category::isActif)

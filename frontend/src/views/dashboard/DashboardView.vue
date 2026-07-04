@@ -148,14 +148,15 @@ const chartSeries = computed(() => [
 async function loadDashboard() {
   loading.value = true
   try {
-    const [warehouses, orders, transfers, receipts, issues, inventories, movements] = await Promise.allSettled([
+    const [warehouses, kpis, orders, transfers, receipts, issues, inventories, movements] = await Promise.allSettled([
       WarehouseService.getAll(),
+      api.get('/dashboard/kpis'),
       purchaseOrderService.findAll(0, 200),
       transferService.findAll(0, 200),
       receiptService.findAll(0, 200),
       issueService.findAll(0, 200),
       inventoryService.findAll(0, 200),
-      api.get('/stocks/movements', { params: { page: 0, size: 200 } }),
+      api.get('/stock-movements', { params: { page: 0, size: 200 } }),
     ])
 
     const whs = warehouses.status === 'fulfilled' ? warehouses.value : []
@@ -164,6 +165,15 @@ async function loadDashboard() {
     const totalOcc = activeWarehouses.value.reduce((s: number, w: any) => s + occ(w), 0)
     stats.value.totalEntrepots = activeWarehouses.value.length
     stats.value.tauxOccupationMoyen = activeWarehouses.value.length ? Math.round(totalOcc / activeWarehouses.value.length) : 0
+
+    // Utiliser les KPIs du backend si disponibles
+    if (kpis.status === 'fulfilled') {
+      const k = kpis.value.data
+      stats.value.totalProduits = k.productsInStock ?? stats.value.totalProduits
+      stats.value.produitsCritiques = k.criticalStockProducts ?? 0
+      stats.value.entreesMonth = k.incomingMovementsThisMonth ?? 0
+      stats.value.sortiesMonth = k.outgoingMovementsThisMonth ?? 0
+    }
 
     if (orders.status === 'fulfilled') {
       const all = orders.value.content
@@ -185,8 +195,13 @@ async function loadDashboard() {
     if (movements.status === 'fulfilled') {
       const mvts = movements.value.data.content || []
       const now = new Date(); const m = now.getMonth(); const y = now.getFullYear()
-      stats.value.entreesMonth = mvts.filter((mv: any) => mv.type === 'ENTREE' && new Date(mv.createdAt).getMonth() === m && new Date(mv.createdAt).getFullYear() === y).length
-      stats.value.sortiesMonth = mvts.filter((mv: any) => mv.type === 'SORTIE' && new Date(mv.createdAt).getMonth() === m && new Date(mv.createdAt).getFullYear() === y).length
+
+      // N'écraser les KPIs backend que si pas disponibles
+      if (kpis.status !== 'fulfilled') {
+        stats.value.entreesMonth = mvts.filter((mv: any) => mv.type === 'ENTREE' && new Date(mv.createdAt).getMonth() === m && new Date(mv.createdAt).getFullYear() === y).length
+        stats.value.sortiesMonth = mvts.filter((mv: any) => mv.type === 'SORTIE' && new Date(mv.createdAt).getMonth() === m && new Date(mv.createdAt).getFullYear() === y).length
+        stats.value.totalProduits = new Set(mvts.map((mv: any) => mv.produitId)).size
+      }
 
       // Construire évolution 30 jours
       const days: Record<string, { entrees: number; sorties: number }> = {}
@@ -203,36 +218,6 @@ async function loadDashboard() {
         }
       })
       stockEvolution.value = Object.entries(days).map(([date, v]) => ({ date, ...v }))
-
-      stats.value.totalProduits = new Set(mvts.map((mv: any) => mv.produitId)).size
-      productRotation.value = Array.from(
-        new Map(
-          mvts
-            .filter((mv: any) => mv.type === 'ENTREE' || mv.type === 'SORTIE')
-            .reduce((acc: any[], mv: any) => {
-              const month = new Date(mv.createdAt).toLocaleDateString('fr-FR', { month: '2-digit', year: 'numeric' })
-              acc.push({ month, ...mv })
-              return acc
-            }, [])
-            .reduce((map: Map<string, any>, mv: any) => {
-              const key = mv.month
-              if (!map.has(key)) {
-                map.set(key, { month: key, productsMoved: new Set<number>(), entries: 0, exits: 0 })
-              }
-              const item = map.get(key)
-              item.productsMoved.add(mv.produitId)
-              if (mv.type === 'ENTREE') item.entries += 1
-              if (mv.type === 'SORTIE') item.exits += 1
-              return map
-            }, new Map())
-            .entries()
-        )
-      ).map(([month, item]: any) => ({
-        month,
-        productsMoved: item.productsMoved.size,
-        entries: item.entries,
-        exits: item.exits,
-      })).sort((a: any, b: any) => a.month.localeCompare(b.month))
     }
   } finally {
     loading.value = false

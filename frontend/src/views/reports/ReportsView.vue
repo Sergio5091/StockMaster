@@ -37,6 +37,7 @@
         <div class="flex gap-2">
           <button @click="download('movements','csv')" :disabled="downloading" class="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl bg-muted border border-border text-muted-foreground text-xs font-medium hover:bg-muted/80 transition-colors disabled:opacity-50"><FileText :size="13" /> CSV</button>
           <button @click="download('movements','json')" :disabled="downloading" class="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-semibold hover:bg-emerald-100 transition-colors disabled:opacity-50"><FileDown :size="13" /> JSON</button>
+          <button @click="downloadPdf('movements')" :disabled="downloading" class="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs font-semibold hover:bg-red-100 transition-colors disabled:opacity-50"><FileText :size="13" /> PDF</button>
         </div>
       </div>
 
@@ -60,6 +61,7 @@
         <div class="flex gap-2">
           <button @click="download('stock','csv')" :disabled="downloading" class="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl bg-muted border border-border text-muted-foreground text-xs font-medium hover:bg-muted/80 transition-colors disabled:opacity-50"><FileText :size="13" /> CSV</button>
           <button @click="download('stock','json')" :disabled="downloading" class="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-semibold hover:bg-emerald-100 transition-colors disabled:opacity-50"><FileDown :size="13" /> JSON</button>
+          <button @click="downloadPdf('stock')" :disabled="downloading" class="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs font-semibold hover:bg-red-100 transition-colors disabled:opacity-50"><FileText :size="13" /> PDF</button>
         </div>
       </div>
 
@@ -81,6 +83,7 @@
         </div>
         <div class="flex gap-2">
           <button @click="download('inventory','json')" :disabled="downloading || !reports.inventory.id" class="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-semibold hover:bg-emerald-100 transition-colors disabled:opacity-50"><FileDown :size="13" /> JSON</button>
+          <button @click="downloadPdf('inventory')" :disabled="downloading || !reports.inventory.id" class="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs font-semibold hover:bg-red-100 transition-colors disabled:opacity-50"><FileText :size="13" /> PDF</button>
         </div>
       </div>
 
@@ -145,14 +148,23 @@ async function download(type: string, format: string) {
   try {
     let data: any[] = []
     if (type === 'movements') {
-      const res = await api.get('/stocks/movements', { params: { page: 0, size: 1000 } })
+      const params: Record<string, any> = { page: 0, size: 1000 }
+      if (reports.movements.type) params.type = reports.movements.type
+      if (reports.movements.dateFrom && reports.movements.dateTo) {
+        params.dateDebut = reports.movements.dateFrom
+        params.dateFin = reports.movements.dateTo
+      }
+      if (reports.movements.entrepotId) params.entrepotId = reports.movements.entrepotId
+      const res = await api.get('/stock-movements', { params })
       data = res.data.content || []
-      if (reports.movements.entrepotId) data = data.filter((m: any) => m.entrepotSourceId == reports.movements.entrepotId || m.entrepotDestinationId == reports.movements.entrepotId)
-      if (reports.movements.type) data = data.filter((m: any) => m.type === reports.movements.type)
     } else if (type === 'stock') {
-      const res = await api.get('/stocks', { params: { page: 0, size: 1000 } })
-      data = res.data.content || []
-      if (reports.stock.entrepotId) data = data.filter((s: any) => s.entrepotId == reports.stock.entrepotId)
+      if (reports.stock.entrepotId) {
+        const res = await api.get(`/stocks/warehouse/${reports.stock.entrepotId}`)
+        data = res.data || []
+      } else {
+        const res = await api.get('/stocks', { params: { page: 0, size: 1000 } })
+        data = res.data.content || []
+      }
     } else if (type === 'inventory' && reports.inventory.id) {
       const inv = await inventoryService.findById(reports.inventory.id)
       data = inv.lignes || []
@@ -171,6 +183,38 @@ async function download(type: string, format: string) {
     toast.value = `Rapport "${type}" téléchargé ✓`
   } catch {
     toast.value = 'Erreur lors de la génération du rapport'
+  } finally {
+    downloading.value = false
+    setTimeout(() => { toast.value = '' }, 3000)
+  }
+}
+
+async function downloadPdf(type: string) {
+  downloading.value = true
+  toast.value = `Génération du PDF "${type}"…`
+  try {
+    let url = ''
+    const params: Record<string, any> = {}
+    if (type === 'movements') {
+      url = '/v1/reports/movements/pdf'
+      if (reports.movements.dateFrom) params.dateDebut = reports.movements.dateFrom
+      if (reports.movements.dateTo) params.dateFin = reports.movements.dateTo
+      if (reports.movements.entrepotId) params.entrepotId = reports.movements.entrepotId
+    } else if (type === 'stock') {
+      url = '/v1/reports/stock/pdf'
+      if (reports.stock.entrepotId) params.entrepotId = reports.stock.entrepotId
+    } else if (type === 'inventory' && reports.inventory.id) {
+      url = `/v1/reports/inventory/pdf`
+    }
+    if (!url) return
+    const res = await api.get(url, { params, responseType: 'blob' })
+    const blob = new Blob([res.data], { type: 'application/pdf' })
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob)
+    a.download = `${type}-${today}.pdf`; a.click()
+    URL.revokeObjectURL(a.href)
+    toast.value = `PDF "${type}" téléchargé ✓`
+  } catch {
+    toast.value = 'Erreur lors de la génération du PDF'
   } finally {
     downloading.value = false
     setTimeout(() => { toast.value = '' }, 3000)

@@ -8,6 +8,7 @@ import java.util.List;
 public interface CategoryRepository extends JpaRepository<Category, Long> {
     List<Category> findByActifTrue();
     List<Category> findByParentIdIsNull();
+    List<Category> findByParentIdIsNullAndActifTrue();
     List<Category> findByParentId(Long parentId);
     boolean existsByNomIgnoreCase(String nom);
     long countByParentId(Long parentId);
