@@ -22,4 +22,13 @@ public interface StockMovementRepository extends JpaRepository<StockMovement, Lo
             @Param("debut") LocalDateTime debut,
             @Param("fin") LocalDateTime fin,
             Pageable pageable);
+
+    @Query("SELECT COUNT(m) FROM StockMovement m WHERE m.createdAt >= :firstDay")
+    long countSince(@Param("firstDay") LocalDateTime firstDay);
+
+    @Query("SELECT COUNT(m) FROM StockMovement m WHERE m.createdAt >= :firstDay AND m.type = :type")
+    long countSinceByType(@Param("firstDay") LocalDateTime firstDay, @Param("type") MovementType type);
+
+    @Query("SELECT COALESCE(SUM(m.quantite), 0) FROM StockMovement m WHERE m.createdAt BETWEEN :start AND :end AND m.type = :type")
+    long sumQuantityByTypeAndPeriod(@Param("start") LocalDateTime start, @Param("end") LocalDateTime end, @Param("type") MovementType type);
 }

@@ -196,15 +196,15 @@ async function downloadPdf(type: string) {
     let url = ''
     const params: Record<string, any> = {}
     if (type === 'movements') {
-      url = '/v1/reports/movements/pdf'
+      url = '/api/v1/reports/movements/pdf'
       if (reports.movements.dateFrom) params.dateDebut = reports.movements.dateFrom
       if (reports.movements.dateTo) params.dateFin = reports.movements.dateTo
       if (reports.movements.entrepotId) params.entrepotId = reports.movements.entrepotId
     } else if (type === 'stock') {
-      url = '/v1/reports/stock/pdf'
+      url = '/api/v1/reports/stock/pdf'
       if (reports.stock.entrepotId) params.entrepotId = reports.stock.entrepotId
     } else if (type === 'inventory' && reports.inventory.id) {
-      url = `/v1/reports/inventory/pdf`
+      url = `/api/v1/reports/inventory/pdf`
     }
     if (!url) return
     const res = await api.get(url, { params, responseType: 'blob' })

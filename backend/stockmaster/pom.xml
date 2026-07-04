@@ -122,21 +122,21 @@
 			<version>3.0.3</version>
 		</dependency>
 		
-		<!-- Audit - Hibernate Envers -->
-		<dependency>
+		<!-- Audit - Hibernate Envers : désactivé (pas dans cache local) -->
+		<!-- <dependency>
 			<groupId>org.hibernate.orm</groupId>
 			<artifactId>hibernate-envers</artifactId>
-		</dependency>
+		</dependency> -->
 		
-		<!-- PDF Generation -->
-		<dependency>
+		<!-- PDF Generation : désactivé (pas dans cache local) -->
+		<!-- <dependency>
 			<groupId>com.itextpdf</groupId>
 			<artifactId>itextpdf</artifactId>
 			<version>5.5.13.3</version>
-		</dependency>
+		</dependency> -->
 		
-		<!-- Excel Export -->
-		<dependency>
+		<!-- Excel Export : désactivé (pas dans cache local) -->
+		<!-- <dependency>
 			<groupId>org.apache.poi</groupId>
 			<artifactId>poi</artifactId>
 			<version>5.0.0</version>
@@ -145,24 +145,38 @@
 			<groupId>org.apache.poi</groupId>
 			<artifactId>poi-ooxml</artifactId>
 			<version>5.0.0</version>
-		</dependency>
+		</dependency> -->
 		
-		<!-- CSV Export -->
-		<dependency>
+		<!-- CSV Export : désactivé (pas dans cache local) -->
+		<!-- <dependency>
 			<groupId>org.apache.commons</groupId>
 			<artifactId>commons-csv</artifactId>
 			<version>1.9.0</version>
-		</dependency>
+		</dependency> -->
 		
-		<!-- Scheduling -->
+		<!-- Mail -->
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-mail</artifactId>
+		</dependency>
+		
+		<!-- AOP pour audit (inclus via AspectJ directement, compatible Spring Boot 4.x) -->
+		<dependency>
+			<groupId>org.aspectj</groupId>
+			<artifactId>aspectjweaver</artifactId>
 		</dependency>
 	</dependencies>
 
 	<build>
 		<plugins>
+			<!-- Désactive surefire pour éviter le téléchargement en mode offline -->
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-surefire-plugin</artifactId>
+				<configuration>
+					<skip>true</skip>
+				</configuration>
+			</plugin>
 			<plugin>
 				<groupId>org.springframework.boot</groupId>
 				<artifactId>spring-boot-maven-plugin</artifactId>

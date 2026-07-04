@@ -40,12 +40,14 @@ public class WarehouseController {
     }
 
     @PostMapping
+    @PreAuthorize("hasAnyRole('ADMINISTRATEUR', 'GESTIONNAIRE')")
     @Operation(summary = "Créer un entrepôt")
     public ResponseEntity<WarehouseDTO> create(@Valid @RequestBody WarehouseCreateDTO dto) {
         return ResponseEntity.status(HttpStatus.CREATED).body(warehouseService.createWarehouse(dto));
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("hasAnyRole('ADMINISTRATEUR', 'GESTIONNAIRE')")
     @Operation(summary = "Modifier un entrepôt")
     public ResponseEntity<WarehouseDTO> update(@PathVariable Long id,
             @Valid @RequestBody WarehouseUpdateDTO dto) {
@@ -53,6 +55,7 @@ public class WarehouseController {
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('ADMINISTRATEUR')")
     @Operation(summary = "Désactiver un entrepôt")
     public ResponseEntity<Void> delete(@PathVariable Long id) {
         warehouseService.deleteWarehouse(id);

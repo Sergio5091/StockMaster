@@ -17,28 +17,47 @@
       </button>
       <nav class="flex-1 overflow-y-auto py-4 px-2 space-y-0.5">
         <NavItem :open="sidebarOpen" :to="{ name: 'dashboard' }" icon="LayoutDashboard" label="Tableau de bord" />
-        <NavItem :open="sidebarOpen" :to="{ name: 'kpi' }" icon="BarChart3" label="KPI" />
-        <NavSection v-if="sidebarOpen" label="Structure" />
-        <NavItem :open="sidebarOpen" :to="{ name: 'warehouses' }" icon="Warehouse" label="Entrepôts" />
-        <NavSection v-if="sidebarOpen" label="Catalogue" />
-        <NavItem :open="sidebarOpen" :to="{ name: 'categories' }" icon="Tag" label="Catégories" />
-        <NavItem :open="sidebarOpen" :to="{ name: 'products' }" icon="Package" label="Produits" />
-        <NavItem :open="sidebarOpen" :to="{ name: 'suppliers' }" icon="Truck" label="Fournisseurs" />
+
+        <!-- Structure — Admin et Manager -->
+        <template v-if="auth.isAdmin || auth.isManager">
+          <NavSection v-if="sidebarOpen" label="Structure" />
+          <NavItem :open="sidebarOpen" :to="{ name: 'warehouses' }" icon="Warehouse" label="Entrepôts" />
+        </template>
+
+        <!-- Catalogue — Admin et Manager -->
+        <template v-if="auth.isAdmin || auth.isManager">
+          <NavSection v-if="sidebarOpen" label="Catalogue" />
+          <NavItem v-if="auth.isAdmin" :open="sidebarOpen" :to="{ name: 'categories' }" icon="Tag" label="Catégories" />
+          <NavItem :open="sidebarOpen" :to="{ name: 'products' }" icon="Package" label="Produits" />
+          <NavItem :open="sidebarOpen" :to="{ name: 'suppliers' }" icon="Truck" label="Fournisseurs" />
+        </template>
+
+        <!-- Stocks — tous sauf Auditeur qui voit en lecture -->
         <NavSection v-if="sidebarOpen" label="Stocks" />
         <NavItem :open="sidebarOpen" :to="{ name: 'stocks' }" icon="BarChart3" label="Niveaux de stock" />
         <NavItem :open="sidebarOpen" :to="{ name: 'stock-movements' }" icon="ArrowLeftRight" label="Mouvements" />
-        <NavSection v-if="sidebarOpen" label="Opérations" />
-        <NavItem :open="sidebarOpen" :to="{ name: 'receipts' }" icon="PackagePlus" label="Bons de réception" />
-        <NavItem :open="sidebarOpen" :to="{ name: 'issues' }" icon="PackageMinus" label="Bons de sortie" />
-        <NavItem :open="sidebarOpen" :to="{ name: 'transfers' }" icon="MoveRight" label="Transferts" />
-        <NavItem :open="sidebarOpen" :to="{ name: 'purchase-orders' }" icon="ShoppingCart" label="Commandes" />
-        <NavItem :open="sidebarOpen" :to="{ name: 'inventories' }" icon="ClipboardList" label="Inventaires" />
+
+        <!-- Opérations — Admin, Manager, Opérateur -->
+        <template v-if="!auth.isAuditor">
+          <NavSection v-if="sidebarOpen" label="Opérations" />
+          <NavItem :open="sidebarOpen" :to="{ name: 'receipts' }" icon="PackagePlus" label="Bons de réception" />
+          <NavItem :open="sidebarOpen" :to="{ name: 'issues' }" icon="PackageMinus" label="Bons de sortie" />
+          <NavItem :open="sidebarOpen" :to="{ name: 'transfers' }" icon="MoveRight" label="Transferts" />
+          <NavItem v-if="auth.isAdmin || auth.isManager" :open="sidebarOpen" :to="{ name: 'purchase-orders' }" icon="ShoppingCart" label="Commandes" />
+          <NavItem v-if="auth.isAdmin || auth.isManager" :open="sidebarOpen" :to="{ name: 'inventories' }" icon="ClipboardList" label="Inventaires" />
+        </template>
+
+        <!-- Supervision — Admin, Manager, Auditeur -->
         <NavSection v-if="sidebarOpen" label="Supervision" />
         <NavItem :open="sidebarOpen" :to="{ name: 'alerts' }" icon="Bell" label="Alertes" :badge="unreadAlerts" />
-        <NavItem :open="sidebarOpen" :to="{ name: 'reports' }" icon="FileText" label="Rapports" />
-        <NavItem :open="sidebarOpen" :to="{ name: 'audit' }" icon="History" label="Audit" />
-        <NavSection v-if="sidebarOpen" label="Administration" />
-        <NavItem :open="sidebarOpen" :to="{ name: 'users' }" icon="Users" label="Utilisateurs" />
+        <NavItem v-if="auth.isAdmin || auth.isManager || auth.isAuditor" :open="sidebarOpen" :to="{ name: 'reports' }" icon="FileText" label="Rapports" />
+        <NavItem v-if="auth.isAdmin || auth.isAuditor" :open="sidebarOpen" :to="{ name: 'audit' }" icon="History" label="Audit" />
+
+        <!-- Administration — Admin uniquement -->
+        <template v-if="auth.isAdmin">
+          <NavSection v-if="sidebarOpen" label="Administration" />
+          <NavItem :open="sidebarOpen" :to="{ name: 'users' }" icon="Users" label="Utilisateurs" />
+        </template>
       </nav>
       <div class="border-t p-3" style="border-color: rgba(255,255,255,0.06);">
         <RouterLink to="/profile" class="flex items-center gap-3 p-2 rounded-xl hover:bg-white/5 transition-colors cursor-pointer">

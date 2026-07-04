@@ -54,12 +54,14 @@ public class CategoryController {
     }
 
     @PostMapping
+    @PreAuthorize("hasRole('ADMINISTRATEUR')")
     @Operation(summary = "Créer une catégorie")
     public ResponseEntity<CategoryDTO> create(@Valid @RequestBody CategoryCreateDTO dto) {
         return ResponseEntity.status(HttpStatus.CREATED).body(categoryService.createCategory(dto));
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("hasRole('ADMINISTRATEUR')")
     @Operation(summary = "Modifier une catégorie")
     public ResponseEntity<CategoryDTO> update(@PathVariable Long id,
             @Valid @RequestBody CategoryUpdateDTO dto) {
@@ -67,6 +69,7 @@ public class CategoryController {
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('ADMINISTRATEUR')")
     @Operation(summary = "Désactiver une catégorie (soft delete)")
     public ResponseEntity<Void> delete(@PathVariable Long id) {
         categoryService.deleteCategory(id);
